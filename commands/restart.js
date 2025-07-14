@@ -1,17 +1,12 @@
-// File: restart.js
-// Author: Rahaman Leon
-// Description: Restart the WhatsApp bot safely with rate-limit awareness
-
 const fs = require('fs-extra');
 const path = require('path');
-
-const restartFilePath = path.join(__dirname, '..', 'tmp', 'restart.json');
+const restartFilePath = path.join(__dirname, '..', 'tmp', 'restart.txt');
 
 module.exports = {
     config: {
         name: "restart",
         aliases: ["reboot", "rerun"],
-        version: "1.4",
+        version: "1.5",
         author: "Rahaman Leon",
         coolDown: 10,
         role: 2, // Owner only
@@ -21,16 +16,23 @@ module.exports = {
             en: "{prefix}restart - Restart the bot (Owner only)"
         }
     },
-
+    
     onStart: async function ({ message, client, config, contact }) {
         try {
             const userId = contact.id._serialized;
+            
+            // Check if config exists and has adminBot property
+            if (!config || !config.adminBot || !Array.isArray(config.adminBot)) {
+                console.error('❌ Config error: adminBot not properly configured');
+                return await message.reply("❌ Configuration Error: Admin settings not found. Please check config.json");
+            }
+            
             const isOwner = config.adminBot.includes(userId);
-
             if (!isOwner) {
                 return await message.reply("❌ Access Denied: Only bot owners can restart the bot.");
             }
 
+            // Create restart data - using the same format as restart-alt.js
             const restartData = {
                 chatId: message.from,
                 userId,
@@ -39,84 +41,92 @@ module.exports = {
                 reason: "Manual restart"
             };
 
-            await fs.ensureDir(path.dirname(restartFilePath));
-            await fs.writeJSON(restartFilePath, restartData, { spaces: 2 });
+            // Ensure tmp directory exists
+            const tmpDir = path.join(__dirname, '..', 'tmp');
+            await fs.ensureDir(tmpDir);
 
-            try {
-                await message.reply(
-                    `🔄 **Bot Restart Initiated**\n` +
-                    `👤 By: ${restartData.userName}\n` +
-                    `⏰ Time: ${new Date().toLocaleString()}\n` +
-                    `📝 Status: Restarting...`
-                );
-            } catch (rateErr) {
-                console.warn("⚠️ Rate-limited on reply. Skipping user reply.");
-            }
-
+            // Write restart data to file
+            await fs.writeFile(restartFilePath, JSON.stringify(restartData, null, 2));
+            
+            // Send restart notification
+            await message.reply("🔄 Bot is restarting...\n⏳ Please wait a moment.");
+            
+            // Log restart action
             console.log(`🔄 Bot restart initiated by ${restartData.userName} (${userId})`);
-
-            setTimeout(() => {
-                console.log('🚀 Restarting bot process...');
-                process.exit(1);
-            }, 2000);
-
-        } catch (error) {
-            console.error("Restart error:", error);
-            await message.reply(
-                `❌ **Restart Failed**\n\n` +
-                `Error: ${error.message}\n` +
-                `Time: ${new Date().toLocaleString()}`
-            );
-        }
-    },
-
-    checkRestart: async function (client) {
-        try {
-            if (await fs.pathExists(restartFilePath)) {
-                const { chatId, userName, timestamp, reason } = await fs.readJSON(restartFilePath);
-                const restartTime = ((Date.now() - timestamp) / 1000).toFixed(2);
-
-                const msg = 
-                    `✅ **Bot Restarted Successfully**\n\n` +
-                    `👤 Initiated by: ${userName}\n` +
-                    `⏰ Took: ${restartTime}s\n` +
-                    `📝 Reason: ${reason}\n` +
-                    `🕐 Done: ${new Date().toLocaleString()}`;
-
+            console.log(`📝 Restart data saved to: ${restartFilePath}`);
+            
+            // Small delay to ensure message is sent
+            setTimeout(async () => {
                 try {
-                    await client.sendMessage(chatId, msg);
-                } catch (rateErr) {
-                    console.warn("⚠️ Could not notify restart due to rate limit.");
+                    // Graceful shutdown
+                    if (client && typeof client.destroy === 'function') {
+                        await client.destroy();
+                    }
+                    
+                    // Force exit if graceful shutdown fails
+                    setTimeout(() => {
+                        process.exit(0);
+                    }, 3000);
+                    
+                    // Normal exit
+                    process.exit(0);
+                    
+                } catch (error) {
+                    console.error('❌ Error during restart:', error);
+                    process.exit(1);
                 }
+            }, 1000);
 
-                await fs.remove(restartFilePath);
-                console.log(`✅ Restart notification sent to ${chatId} (${restartTime}s)`);
-            }
-        } catch (err) {
-            console.error("Error sending restart notice:", err);
-            if (await fs.pathExists(restartFilePath)) {
-                await fs.remove(restartFilePath);
+        } catch (error) {
+            console.error('❌ Restart command error:', error);
+            
+            try {
+                await message.reply("❌ Failed to restart bot. Please check console for details.");
+            } catch (replyError) {
+                console.error('❌ Failed to send error message:', replyError);
             }
         }
     },
 
-    emergencyRestart: async function (client, reason = "Emergency restart") {
+    // Optional: Handle restart completion (called when bot starts up)
+    onRestart: async function ({ client, config }) {
         try {
-            const data = {
-                chatId: null,
-                userId: "system",
-                userName: "System",
-                timestamp: Date.now(),
-                reason
-            };
-            await fs.ensureDir(path.dirname(restartFilePath));
-            await fs.writeJSON(restartFilePath, data, { spaces: 2 });
+            // Check if restart file exists
+            if (!await fs.pathExists(restartFilePath)) {
+                return; // No restart data, normal startup
+            }
 
-            console.log(`🚨 Emergency restart: ${reason}`);
-            process.exit(1);
+            // Read restart data
+            const restartData = JSON.parse(await fs.readFile(restartFilePath, 'utf8'));
+            
+            // Calculate restart time
+            const restartTime = ((Date.now() - restartData.timestamp) / 1000).toFixed(2);
+            
+            // Send restart completion message
+            const completionMessage = `✅ Bot restart completed successfully!\n⏱️ Restart time: ${restartTime}s\n👤 Initiated by: ${restartData.userName}`;
+            
+            try {
+                await client.sendMessage(restartData.chatId, completionMessage);
+            } catch (sendError) {
+                console.log('ℹ️ Could not send restart completion message:', sendError.message);
+            }
+            
+            // Log restart completion
+            console.log(`✅ Bot restart completed in ${restartTime}s`);
+            console.log(`📋 Restart initiated by: ${restartData.userName}`);
+            
+            // Clean up restart file
+            await fs.remove(restartFilePath);
+            
         } catch (error) {
-            console.error("Emergency restart failed:", error);
-            process.exit(1);
+            console.error('❌ Error handling restart completion:', error);
+            
+            // Clean up restart file even if there's an error
+            try {
+                await fs.remove(restartFilePath);
+            } catch (cleanupError) {
+                console.error('❌ Failed to clean up restart file:', cleanupError);
+            }
         }
     }
 };

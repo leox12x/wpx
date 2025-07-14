@@ -1,42 +1,21 @@
 module.exports = {
-    config: {
-        name: "ping",
-        aliases: ["pong"],
-        version: "1.1",
-        author: "Rahaman Leon",
-        coolDown: 3,
-        role: 0,
-        description: "Check bot response time",
-        category: "utility",
-        guide: {
-            en: "Use {prefix}ping to check bot response time"
-        }
-    },
-
-    onStart: async function ({ message }) {
+    name: 'ping',
+    description: 'Test if the bot is responding',
+    usage: '!ping',
+    category: 'utility',
+    
+    async execute(message, args, client, config) {
         try {
             const startTime = Date.now();
-            
-            // Send initial ping message
-            await message.reply("🏓 Pinging...");
-            
+            const reply = await message.reply('🏓 Pong!');
             const endTime = Date.now();
-            const responseTime = endTime - startTime;
             
-            // Send final ping result
-            const responseText = [
-                "🏓Pong!",
-                "",
-                `⚡Response Time: ${responseTime}ms`,
-                "🤖Bot Status: Online",
-                "📡Connection: Stable"
-            ].join('\n');
+            const latency = endTime - startTime;
+            await reply.edit(`🏓 Pong!\n⏱️ Latency: ${latency}ms`);
             
-            await message.reply(responseText);
-
         } catch (error) {
-            console.error("Ping command error:", error);
-            await message.reply("❌ Failed to ping. Bot may be experiencing issues.");
+            console.error('Error in ping command:', error);
+            await message.reply('❌ An error occurred while processing the ping command.');
         }
     }
 };

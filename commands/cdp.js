@@ -43,23 +43,23 @@ module.exports = {
           const buffer = Buffer.from(response.data, "binary");
           const mimeType = response.headers["content-type"] || "image/jpeg";
 
-          return MessageMedia.fromBuffer(buffer, undefined, mimeType);
+          return new MessageMedia(mimeType, buffer.toString('base64'), 'image.jpg');
         } catch (err) {
           console.error(`[CDP Fetch Error] Failed to load: ${url}\n`, err.message);
           // Fallback to a transparent placeholder image
-          const fallbackURL = "https://via.placeholder.com/300x300.png?text=Image+Unavailable";
+          const fallbackURL = "https://picsum.photos/300/300";
           const fallback = await axios.get(fallbackURL, { responseType: "arraybuffer" });
-          return MessageMedia.fromBuffer(Buffer.from(fallback.data), "image/png", "image/png");
+          return new MessageMedia("image/jpeg", Buffer.from(fallback.data).toString('base64'), "image.jpg");
         }
       };
 
       const mediaBoy = await getMedia(boy);
       const mediaGirl = await getMedia(girl);
 
-      await message.reply({
-        body: "🎀 Here's your couple DP, lovebirds!",
-        attachment: [mediaBoy, mediaGirl]
-      });
+      await message.reply("🎀 Here's your couple DP, lovebirds! (Boy's DP)");
+      await message.reply(mediaBoy);
+      await message.reply("👫 Girl's DP:");
+      await message.reply(mediaGirl);
 
     } catch (error) {
       console.error("[CDP Command Error]", error.message);
