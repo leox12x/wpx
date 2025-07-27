@@ -24,41 +24,31 @@ module.exports = {
     role: 0,
     coolDown: 3,
     shortDescription: "Talk with jan",
-    longDescription: "Text-based response using jan AI, reply supported",
+    longDescription: "Text-based response using jan AI",
     category: "ai",
-    guide: "Type 'jan' or reply to a jan message",
+    guide: "Just type jan or jan <message>, or reply jan’s message"
   },
 
-  // ✅ Reply handle
-  onReply: async function ({ message, event }) {
-    const text = message.body?.toLowerCase() || "";
-    if (!text) return;
+  onStart: async function () {},
 
-    const replyText = await getBotResponse(text);
-    return await message.reply(replyText);
-  },
-
-  // ✅ Chat handler
-  onChat: async function ({ message }) {
+  onChat: async function ({ message, client }) {
     try {
       const body = message.body?.toLowerCase() || "";
-      const triggers = ["jan", "jaan", "জান", "hinata", "bby", "baby"];
+      const triggers = ["jan", "jaan", "জান", "hinata"];
       const words = body.trim().split(/\s+/);
-      const startsWithTrigger = triggers.some(word => body.startsWith(word));
+      const match = triggers.some(trigger => body.startsWith(trigger));
 
-      if (!startsWithTrigger && !message.hasQuotedMsg) return;
-
-      // 📨 If replied to a message previously sent by bot2
+      // ✅ 1. Handle reply to jan message
       if (message.hasQuotedMsg) {
-        const quotedMsg = await message.getQuotedMessage();
-        if (quotedMsg.fromMe) {
+        const quoted = await message.getQuotedMessage();
+        if (quoted.fromMe) {
           const replyText = await getBotResponse(body);
           return await message.reply(replyText);
         }
       }
 
-      // 🟦 Message starts with jan...
-      if (startsWithTrigger) {
+      // ✅ 2. Normal "jan ..." message
+      if (match) {
         if (words.length === 1) {
           const replies = [
             "babu khuda lagse🥺",
@@ -77,13 +67,13 @@ module.exports = {
           return await message.reply(random);
         } else {
           words.shift(); // remove "jan"
-          const userMsg = words.join(" ");
-          const response = await getBotResponse(userMsg);
-          return await message.reply(response);
+          const query = words.join(" ");
+          const replyText = await getBotResponse(query);
+          return await message.reply(replyText);
         }
       }
     } catch (e) {
-      console.error("bot2 error:", e);
+      console.error("Bot2 Chat Error:", e);
       await message.reply("❌ Something went wrong.");
     }
   }
