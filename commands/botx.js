@@ -5,53 +5,70 @@ const baseApiUrl = async () => {
   return base.data.jan;
 };
 
-async function getBotResponse(message) {
+const getBotResponse = async (msg) => {
   try {
     const base = await baseApiUrl();
-    const response = await axios.get(`${base}/jan/font3/${encodeURIComponent(message)}`);
-    return response.data?.message || "try Again";
+    const res = await axios.get(`${base}/jan/font3/${encodeURIComponent(msg)}`);
+    return res.data?.message || "❌ Try again.";
   } catch (err) {
     console.error("API Error:", err.message || err);
-    return "error janu 🥲";
+    return "❌ Error occurred, janu 🥲";
   }
-}
+};
 
 module.exports = {
   config: {
-    name: "botx",
-    version: "1.0",
+    name: "bot2",
+    version: "1.7",
     author: "MahMUD",
     role: 0,
-    description: { en: "WhatsApp-style Jan bot" },
+    coolDown: 3,
+    shortDescription: "Talk with jan",
+    longDescription: "Text-based response using jan AI",
     category: "ai",
-    guide: { en: "Type jan or jan [text]" }
+    guide: "Just type jan or jan <message>"
   },
 
-  onStart: async function () {},
+  onStart: async function () {
+    // Not used here
+  },
 
-  onMessage: async function ({ message, reply }) {
-    const triggers = ["jan", "jaan", "জান", "hinata"];
-    const randomReplies = [
-      "babu khuda lagse🥺",
-      "Hop beda😾, Boss বল boss😼",
-      "𝗜 𝗹𝗼𝘃𝗲 𝘆𝗼𝘂__😘😘",
-      "naw message daw m.me/mahmud.x07",
-      "mb ney bye",
-      "🐒🐒🐒",
-    ];
+  onChat: async function ({ message, client }) {
+    try {
+      const body = message.body?.toLowerCase() || "";
+      const triggers = ["jan", "jaan", "জান", "hinata"];
+      const words = body.trim().split(/\s+/);
+      const match = triggers.some(trigger => body.startsWith(trigger));
 
-    const content = message.body?.toLowerCase() || "";
-    const words = content.trim().split(/\s+/);
-    const firstWord = words[0];
+      if (!match) return;
 
-    if (triggers.includes(firstWord)) {
-      if (words.length === 1) {
-        return reply(randomReplies[Math.floor(Math.random() * randomReplies.length)]);
+      const msgType = words.length;
+
+      if (msgType === 1) {
+        const replies = [
+          "babu khuda lagse🥺",
+          "Hop beda😾, Boss বল boss😼",
+          "আমাকে ডাকলে, আমি কিন্তূ কিস করে দেবো😘",
+          "🐒🐒🐒",
+          "bye",
+          "naw message daw m.me/mahmud.x07",
+          "mb ney bye",
+          "meww",
+          "বলো কি বলবা, সবার সামনে বলবা নাকি?🤭🤏",
+          "𝗜 𝗹𝗼𝘃𝗲 𝘆𝗼𝘂__😘😘",
+          "𝗜 𝗵𝗮𝘁𝗲 𝘆𝗼𝘂__😏😏"
+        ];
+        const random = replies[Math.floor(Math.random() * replies.length)];
+        return await message.reply(random);
       } else {
-        const text = words.slice(1).join(" ");
-        const response = await getBotResponse(text);
-        return reply(response);
+        words.shift(); // remove trigger word
+        const query = words.join(" ");
+        const replyText = await getBotResponse(query);
+        return await message.reply(replyText);
       }
+    } catch (e) {
+      console.error("Bot2 Chat Error:", e);
+      await message.reply("❌ Something went wrong.");
     }
   }
 };
