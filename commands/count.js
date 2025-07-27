@@ -1,82 +1,98 @@
 const mongoose = require("mongoose");
-const MessageCount = require("../models/MessageCount");
 
-// MongoDB Connect (you can move this to a separate file if needed)
-mongoose.connect("mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0", {
+// ✅ MongoDB Connect (Inside Command)
+const MONGO_URI = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0";
+
+mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
+})
+.then(() => console.log("✅ [count.js] MongoDB connected"))
+.catch(err => console.error("❌ MongoDB error:", err));
+
+// ✅ Schema and Model
+const messageCountSchema = new mongoose.Schema({
+  threadID: String,
+  userID: String,
+  name: String,
+  count: { type: Number, default: 0 }
 });
+
+const MessageCount = mongoose.models.MessageCount || mongoose.model("MessageCount", messageCountSchema);
 
 module.exports = {
   config: {
     name: "count",
     aliases: ["c"],
-    version: "2.0",
-    author: "MahMUD (mod from NTKhang)",
+    version: "1.0",
+    author: "Mahmud (MongoDB CMD version)",
     countDown: 5,
     role: 0,
-    description: "Count user's message from DB",
+    description: "Show message count from MongoDB",
     category: "group",
-    guide: "count, count all"
+    guide: "{pn} - Show your count\n{pn} all - All members\n{pn} @mention - Mentioned users"
   },
 
-  onStart: async function ({ message, event, args }) {
+  onStart: async function ({ api, args, message, event }) {
     const { threadID, senderID, mentions } = event;
+    const mentionIDs = Object.keys(mentions || {});
+    const isAll = args[0]?.toLowerCase() === "all";
 
-    if (args[0] && args[0].toLowerCase() === "all") {
-      const allCounts = await MessageCount.find({ threadID });
+    try {
+      if (isAll) {
+        const all = await MessageCount.find({ threadID }).sort({ count: -1 }).limit(50);
+        if (!all.length) return message.reply("❌ No message data found for this group.");
 
-      if (!allCounts.length) return message.reply("❌ No message records found in this group.");
+        let msg = "💬 Group Message Leaderboard:\n";
+        let index = 1;
+        for (const item of all) {
+          const rank = index === 1 ? "🥇" : index === 2 ? "🥈" : index === 3 ? "🥉" : `${index}.`;
+          msg += `\n${rank} ${item.name}: ${item.count}`;
+          index++;
+        }
+        return message.reply(msg);
+      }
 
-      allCounts.sort((a, b) => b.count - a.count);
-      let msg = "📊 Message Count Leaderboard:\n";
+      const targetIDs = mentionIDs.length ? mentionIDs : [senderID];
+      let msg = "";
 
-      allCounts.forEach((user, i) => {
-        let rank = i + 1;
-        let emoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
-        msg += `${emoji} ${user.name || "Unknown"}: ${user.count} messages\n`;
-      });
-
-      return message.reply(msg);
-    }
-
-    if (Object.keys(mentions).length > 0) {
-      let replyMsg = "";
-
-      for (const id in mentions) {
+      for (const id of targetIDs) {
         const data = await MessageCount.findOne({ threadID, userID: id });
-        if (data) {
-          replyMsg += `👤 ${data.name}: ${data.count} messages\n`;
+        if (!data) {
+          msg += `\n❌ ${mentions[id] || "User"} has no data.`;
         } else {
-          replyMsg += `👤 ${mentions[id]}: No messages recorded.\n`;
+          msg += `\n✅ ${data.name}: ${data.count} messages`;
         }
       }
 
-      return message.reply(replyMsg);
+      return message.reply(msg);
+
+    } catch (err) {
+      console.error("❌ Error in count.js:", err);
+      return message.reply("❌ An error occurred: " + err.message);
     }
-
-    // Default: Show user's own message count
-    const self = await MessageCount.findOne({ threadID, userID: senderID });
-
-    if (!self) return message.reply("😶 You haven't sent any message yet.");
-    return message.reply(`📈 You have sent ${self.count} messages in this group.`);
   },
 
   onChat: async function ({ event }) {
-    const { threadID, senderID } = event;
+    const { threadID, senderID, pushName } = event;
 
-    const existing = await MessageCount.findOne({ threadID, userID: senderID });
+    try {
+      const existing = await MessageCount.findOne({ threadID, userID: senderID });
 
-    if (existing) {
-      existing.count += 1;
-      await existing.save();
-    } else {
-      await MessageCount.create({
-        threadID,
-        userID: senderID,
-        name: event.pushName || "Unknown",
-        count: 1
-      });
+      if (!existing) {
+        await MessageCount.create({
+          threadID,
+          userID: senderID,
+          name: pushName || "Unknown",
+          count: 1
+        });
+      } else {
+        existing.count += 1;
+        existing.name = pushName || existing.name;
+        await existing.save();
+      }
+    } catch (err) {
+      console.error("❌ Error updating message count:", err.message);
     }
   }
 };
