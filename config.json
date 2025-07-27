@@ -22,9 +22,9 @@
     "whiteListIds": []
   },
   "database": {
-    "type": "json",
+    "type": "mongodb",
     "path": "./data/database.json",
-    "mongoURI": "mongodb://localhost:27017/whatsapp-bot",
+    "mongoURI": "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0",
     "autoSync": true
   },
   "dashBoard": {
