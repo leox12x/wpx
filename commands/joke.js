@@ -18,6 +18,7 @@ module.exports = {
     author: "Rahaman Leon",
     role: 0,
     coolDown: 3,
+   category: "fun",
     shortDescription: "Tells a random joke",
     longDescription: "Fetches and sends a random programming joke to lighten the mood"
   },
