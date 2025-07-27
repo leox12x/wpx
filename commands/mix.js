@@ -9,7 +9,7 @@ module.exports = {
     author: "RL | Optimized by tas33n",
     countDown: 5,
     role: 0,
-    category: "fun",
+    category: "image",
     shortDescription: "Mix two emojis to create a new emoji image",
     longDescription: "Mix two emojis using Google Emoji Kitchen to generate a fun hybrid",
     guide: "{pn} 😀 😍\n{pn} 🔥 💧\n{pn} 🐶 🐱"
