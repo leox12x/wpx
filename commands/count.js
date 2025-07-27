@@ -1,15 +1,17 @@
 const mongoose = require("mongoose");
 
-// MongoDB Connect
-const MONGO_URI = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0";
+// ========================
+// MongoDB কানেকশন (একবার বট চালুর সময় একবার করুন)
+if (!mongoose.connection.readyState) {
+  mongoose.connect("mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }).then(() => console.log("✅ MongoDB connected for count command"))
+    .catch(err => console.error("❌ MongoDB connection error:", err));
+}
+// ========================
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("✅ [count.js] MongoDB connected"))
-.catch(err => console.error("❌ MongoDB connection error:", err));
-
+// Schema ডিফাইন
 const messageCountSchema = new mongoose.Schema({
   threadID: String,
   userID: String,
@@ -24,30 +26,29 @@ module.exports = {
     name: "count",
     aliases: ["c"],
     version: "1.0",
-    author: "Mahmud (WhatsApp MongoDB Safe)",
+    author: "Mahmud (whatsapp-web.js)",
     countDown: 5,
     role: 0,
-    description: "Show message count from MongoDB",
+    description: "Show message count using MongoDB",
     category: "group",
     guide: "{pn} - your count\n{pn} all - leaderboard\n{pn} @mention - mentioned users"
   },
 
-  onStart: async function ({ api, event, args, message }) {
+  // কমান্ড চালানোর সময়
+  onStart: async function ({ api, event, message, args }) {
     try {
-      // Debug log (comment out after debugging)
-      // console.log("event:", JSON.stringify(event, null, 2));
-      // console.log("message:", JSON.stringify(message, null, 2));
+      // WhatsApp-web.js event থেকে threadID এবং senderID পাওয়া
+      const threadID = event.from;
+      const senderID = event.author || event.from;
+      if (!threadID || !senderID) return await message.reply("❌ Could not get thread or sender ID.");
 
-      const threadID = event?.key?.remoteJid || (message?.chat?.id) || null;
-      const senderID = event?.key?.participant || event?.key?.remoteJid || (message?.author) || null;
-      if (!threadID || !senderID) return message.reply("❌ Could not get thread or sender ID.");
+      // ট্যাগ করা ইউজার আইডি সংগ্রহ (event.message থেকে)
+      const mentions = event.message?.mentionedIds || [];
 
-      const mentions = event?.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-      const isAll = args[0]?.toLowerCase() === "all";
-
-      if (isAll) {
+      // যদি 'all' আর্গুমেন্ট থাকে, তাহলে লিডারবোর্ড দেখাও
+      if (args[0]?.toLowerCase() === "all") {
         const allUsers = await MessageCount.find({ threadID }).sort({ count: -1 }).limit(50);
-        if (!allUsers.length) return message.reply("❌ No message data found for this group.");
+        if (!allUsers.length) return await message.reply("❌ No message data found for this group.");
 
         let msg = "💬 Group Message Leaderboard:\n";
         let index = 1;
@@ -56,9 +57,10 @@ module.exports = {
           msg += `\n${rankEmoji} ${user.name}: ${user.count}`;
           index++;
         }
-        return message.reply(msg);
+        return await message.reply(msg);
       }
 
+      // যদি ট্যাগ করা থাকে, তাদের ডেটা দেখাও, নাহলে নিজের
       const targetIDs = mentions.length ? mentions : [senderID];
       let replyMsg = "";
 
@@ -70,24 +72,29 @@ module.exports = {
           replyMsg += `\n✅ ${userData.name}: ${userData.count} messages`;
         }
       }
-      return message.reply(replyMsg);
+
+      return await message.reply(replyMsg.trim());
     } catch (err) {
       console.error("❌ count command error:", err);
-      return message.reply("❌ An error occurred: " + err.message);
+      return await message.reply("❌ An error occurred: " + err.message);
     }
   },
 
+  // প্রতিটি মেসেজ আসার সময় কল হয়
   onChat: async function ({ event }) {
     try {
-      const threadID = event.key?.remoteJid || null;
-      const senderID = event.key?.participant || event.key?.remoteJid || null;
-      const pushName = event.pushName || "Unknown";
+      const threadID = event.from;
+      const senderID = event.author || event.from;
+      // ইউজারের নাম (notifyName)
+      const pushName = event._data?.notifyName || "Unknown";
 
       if (!threadID || !senderID) return;
 
+      // MongoDB তে ডেটা খুঁজে বের করা
       const existing = await MessageCount.findOne({ threadID, userID: senderID });
 
       if (!existing) {
+        // নতুন ডেটা তৈরি
         await MessageCount.create({
           threadID,
           userID: senderID,
@@ -95,6 +102,7 @@ module.exports = {
           count: 1
         });
       } else {
+        // কাউন্ট বৃদ্ধি এবং নাম আপডেট
         existing.count += 1;
         existing.name = pushName || existing.name;
         await existing.save();
