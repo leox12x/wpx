@@ -18,8 +18,8 @@ module.exports = {
 
   langs: {
     en: {
-      money: "💰 You have %1 coins",
-      moneyOf: "💰 %1 has %2 coins"
+      money: "𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞 %1$",
+      moneyOf: "💰 %1 has %2$"
     }
   },
 
