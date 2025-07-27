@@ -34,7 +34,7 @@ module.exports = {
   onChat: async function ({ message, client }) {
     try {
       const body = message.body?.toLowerCase() || "";
-      const triggers = ["jan", "jaan", "জান", "hinata"];
+      const triggers = ["jan", "jaan", "জান", "hinata", "bby", "baby"];
       const words = body.trim().split(/\s+/);
       const match = triggers.some(trigger => body.startsWith(trigger));
 
