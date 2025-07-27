@@ -8,7 +8,7 @@ module.exports = {
     author: "MahMUD | Fixed by Rahaman Leon",
     countDown: 5,
     role: 0,
-    category: "love",
+    category: "image",
     guide: "{pn} - Get a random Couple DP\n{pn} list - Show total number of Couple DPs"
   },
 
