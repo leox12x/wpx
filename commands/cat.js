@@ -15,7 +15,7 @@ module.exports = {
     description: {
       en: "Sends a random cat image",
     },
-    category: "fun",
+    category: "image",
     guide: {
       en: "{prefix}cat - Get a cute cat picture",
     },
