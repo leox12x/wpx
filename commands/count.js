@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-// MongoDB connection inside the command
+// MongoDB Connect
 const MONGO_URI = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(MONGO_URI, {
@@ -24,23 +24,28 @@ module.exports = {
     name: "count",
     aliases: ["c"],
     version: "1.0",
-    author: "Mahmud (WhatsApp MongoDB)",
+    author: "Mahmud (WhatsApp MongoDB Safe)",
     countDown: 5,
     role: 0,
-    description: "Show message count using MongoDB",
+    description: "Show message count from MongoDB",
     category: "group",
     guide: "{pn} - your count\n{pn} all - leaderboard\n{pn} @mention - mentioned users"
   },
 
-  onStart: async function ({ api, args, message, event }) {
+  onStart: async function ({ api, event, args, message }) {
     try {
-      const threadID = event.key.remoteJid;
-      const senderID = event.key.participant || event.key.remoteJid;
-      const mentions = event.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      // Debug log (comment out after debugging)
+      // console.log("event:", JSON.stringify(event, null, 2));
+      // console.log("message:", JSON.stringify(message, null, 2));
+
+      const threadID = event?.key?.remoteJid || (message?.chat?.id) || null;
+      const senderID = event?.key?.participant || event?.key?.remoteJid || (message?.author) || null;
+      if (!threadID || !senderID) return message.reply("❌ Could not get thread or sender ID.");
+
+      const mentions = event?.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
       const isAll = args[0]?.toLowerCase() === "all";
 
       if (isAll) {
-        // Show leaderboard (top 50)
         const allUsers = await MessageCount.find({ threadID }).sort({ count: -1 }).limit(50);
         if (!allUsers.length) return message.reply("❌ No message data found for this group.");
 
@@ -54,7 +59,6 @@ module.exports = {
         return message.reply(msg);
       }
 
-      // If mentions present, show mentioned users count else show sender count
       const targetIDs = mentions.length ? mentions : [senderID];
       let replyMsg = "";
 
@@ -66,7 +70,6 @@ module.exports = {
           replyMsg += `\n✅ ${userData.name}: ${userData.count} messages`;
         }
       }
-
       return message.reply(replyMsg);
     } catch (err) {
       console.error("❌ count command error:", err);
@@ -76,9 +79,11 @@ module.exports = {
 
   onChat: async function ({ event }) {
     try {
-      const threadID = event.key.remoteJid;
-      const senderID = event.key.participant || event.key.remoteJid;
+      const threadID = event.key?.remoteJid || null;
+      const senderID = event.key?.participant || event.key?.remoteJid || null;
       const pushName = event.pushName || "Unknown";
+
+      if (!threadID || !senderID) return;
 
       const existing = await MessageCount.findOne({ threadID, userID: senderID });
 
