@@ -12,9 +12,12 @@ module.exports = {
     category: "game"
   },
 
-  onStart: async function ({ args, message, event }) {
+  onStart: async function (context) {
     try {
-      const senderID = event.senderID;
+      const { args, message, event } = context;
+      const senderID = event?.senderID;
+      if (!senderID) return message.reply("❌ Missing sender ID.");
+
       const maxlimit = 20;
       const slotTimeLimit = 10 * 60 * 60 * 1000; // 10 hours
 
@@ -52,14 +55,12 @@ module.exports = {
 
       userData.slots.count++;
 
-      // Spin the slots
       const slots = ["❤", "💜", "🖤", "🤍", "🤎", "💙", "💚", "💛"];
       const slot1 = slots[Math.floor(Math.random() * slots.length)];
       const slot2 = slots[Math.floor(Math.random() * slots.length)];
       const slot3 = slots[Math.floor(Math.random() * slots.length)];
 
       const winnings = calculateWinnings(slot1, slot2, slot3, amount);
-
       userData.coins += winnings;
 
       await updateUserData(senderID, userData);
@@ -70,7 +71,7 @@ module.exports = {
 
     } catch (err) {
       log(`❌ Slot Error: ${err.message}`, "error");
-      return message.reply("❌ Something went wrong with the slot game.");
+      return context?.message?.reply("❌ Something went wrong with the slot game.");
     }
   }
 };
