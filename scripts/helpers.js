@@ -35,7 +35,7 @@ function formatUptime(ms) {
 async function initDatabase() {
     const config = require('../config.json');
     
-    if (config.database.type === 'json') {
+    if (config.database.type === 'mongodb') {
         const dbPath = path.join(__dirname, '..', config.database.path);
         const dbDir = path.dirname(dbPath);
         
@@ -58,7 +58,7 @@ async function initDatabase() {
 async function getUserData(userId) {
     const config = require('../config.json');
     
-    if (config.database.type === 'json') {
+    if (config.database.type === 'mongodb') {
         const dbPath = path.join(__dirname, '..', config.database.path);
         const data = await fs.readJSON(dbPath);
         
