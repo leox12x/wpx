@@ -6,7 +6,7 @@ const config = require('../config.json');
 const User = require('../models/User');
 const Group = require('../models/Group');
 
-// MongoDB connect
+// Connect to MongoDB
 if (!mongoose.connection.readyState) {
   mongoose.connect(config.database.uri, {
     useNewUrlParser: true,
@@ -15,7 +15,7 @@ if (!mongoose.connection.readyState) {
     .catch(err => log(`❌ MongoDB connection error: ${err.message}`, 'error'));
 }
 
-// Logger
+// Logging function
 function log(message, type = 'info') {
   const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
   const colors = {
@@ -24,10 +24,12 @@ function log(message, type = 'info') {
     warning: chalk.yellow,
     error: chalk.red
   };
-  console.log(`[${timestamp}] ${colors[type] ? colors[type](message) : message}`);
+
+  const coloredMessage = colors[type] ? colors[type](message) : message;
+  console.log(`[${timestamp}] ${coloredMessage}`);
 }
 
-// Uptime formatter
+// Format uptime
 function formatUptime(ms) {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -40,12 +42,12 @@ function formatUptime(ms) {
   return `${seconds}s`;
 }
 
-// Initialize (MongoDB only)
+// Initialize database
 async function initDatabase() {
   log('✅ MongoDB mode, no JSON database to initialize.', 'info');
 }
 
-// ✅ Get or create user
+// ✅ Get user data with name support
 async function getUserData(userId, name = null) {
   let user = await User.findOne({ id: userId });
   if (!user) {
@@ -68,9 +70,9 @@ async function getUserData(userId, name = null) {
   return user;
 }
 
-// ✅ Update user
+// Update user data
 async function updateUserData(userId, updates) {
-  const user = await User.findOneAndUpdate(
+  let user = await User.findOneAndUpdate(
     { id: userId },
     { $set: updates },
     { new: true, upsert: true }
@@ -78,7 +80,7 @@ async function updateUserData(userId, updates) {
   return user;
 }
 
-// ✅ Get or create group
+// Get group data
 async function getGroupData(groupId) {
   let group = await Group.findOne({ id: groupId });
   if (!group) {
@@ -97,9 +99,9 @@ async function getGroupData(groupId) {
   return group;
 }
 
-// ✅ Update group
+// Update group data
 async function updateGroupData(groupId, updates) {
-  const group = await Group.findOneAndUpdate(
+  let group = await Group.findOneAndUpdate(
     { id: groupId },
     { $set: updates },
     { new: true, upsert: true }
@@ -107,9 +109,11 @@ async function updateGroupData(groupId, updates) {
   return group;
 }
 
-// ✅ OpenAI API (optional)
+// OpenAI integration
 async function callOpenAI(prompt, userId = null) {
-  if (!config.ai.openai.apiKey) throw new Error('OpenAI API key not configured');
+  if (!config.ai.openai.apiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
 
   try {
     const response = await axios.post(
@@ -117,8 +121,14 @@ async function callOpenAI(prompt, userId = null) {
       {
         model: config.ai.openai.model || 'gpt-3.5-turbo',
         messages: [
-          { role: 'system', content: 'You are a helpful WhatsApp bot assistant.' },
-          { role: 'user', content: prompt }
+          {
+            role: 'system',
+            content: 'You are a helpful assistant in a WhatsApp bot. Keep responses concise and friendly.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
         ],
         max_tokens: 500,
         temperature: 0.7
@@ -138,12 +148,26 @@ async function callOpenAI(prompt, userId = null) {
   }
 }
 
-// ✅ Track usage
-async function trackCommand(userId) {
+// Download media (placeholder)
+async function downloadMedia(message) {
   try {
-    const user = await getUserData(userId);
+    if (message.hasMedia) {
+      const media = await message.downloadMedia();
+      return media;
+    }
+    return null;
+  } catch (error) {
+    log(`Media download error: ${error.message}`, 'error');
+    return null;
+  }
+}
+
+// ✅ Track command usage and update name if provided
+async function trackCommand(userId, name = null) {
+  try {
+    const userData = await getUserData(userId, name);
     await updateUserData(userId, {
-      commandCount: (user.commandCount || 0) + 1,
+      commandCount: (userData.commandCount || 0) + 1,
       lastActive: Date.now()
     });
   } catch (error) {
@@ -160,5 +184,6 @@ module.exports = {
   getGroupData,
   updateGroupData,
   callOpenAI,
+  downloadMedia,
   trackCommand
 };
