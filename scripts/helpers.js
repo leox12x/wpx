@@ -49,10 +49,12 @@ async function initDatabase() {
 
 // Get user data
 async function getUserData(userId) {
+async function getUserData(userId, name = null) {
   let user = await User.findOne({ id: userId });
   if (!user) {
     user = new User({
       id: userId,
+      name: name || userId, // Save name if provided
       coins: 0,
       exp: 0,
       level: 1,
@@ -65,6 +67,7 @@ async function getUserData(userId) {
   }
   return user;
 }
+
 
 // Update user data
 async function updateUserData(userId, updates) {
