@@ -1,4 +1,4 @@
-const { getUserData, updateUserData } = = require('../scripts/helpers');
+const { getUserData, updateUserData } = require('../scripts/helpers');
 
 module.exports = {
   config: {
