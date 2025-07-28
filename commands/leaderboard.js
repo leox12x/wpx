@@ -1,81 +1,84 @@
-const { getAllUsers, getUserData, log } = require('../scripts/helpers');
+const { getAllUserData } = require("../scripts/helpers");
 
 module.exports = {
   config: {
-    name: "leaderboard",
-    aliases: ["top", "lb"],
-    version: "1.1",
-    author: "RL (MongoDB Version)",
-    coolDown: 5,
+    name: "top",
+    version: "1.7",
+    author: "MahMUD",
     role: 0,
-    description: "View top players leaderboard",
-    category: "game",
+    category: "economy",
     guide: {
-      en: "Use {prefix}leaderboard\n{prefix}leaderboard coins\n{prefix}leaderboard exp\n{prefix}leaderboard commands"
+      en: "Use `{pn}` or `{pn} bal` to view richest users, `{pn} exp` to view top EXP users"
     }
   },
 
-  onStart: async function ({ message, args, client }) {
-    const type = args[0] || "level";
-    const validTypes = ["level", "coins", "exp", "commands"];
+  onStart: async function ({ args, message }) {
+    try {
+      const type = args[0]?.toLowerCase() || "bal";
+      const allUsers = await getAllUserData();
 
-    if (!validTypes.includes(type))
-      return message.reply(`❌ Invalid type. Use one of: ${validTypes.join(", ")}`);
+      if (type === "exp") {
+        const usersWithExp = allUsers.filter(user => user.exp > 0);
+        if (usersWithExp.length === 0) return message.reply("❌ No users with EXP found.");
 
-    const users = await getAllUsers();
-    if (!users.length) return message.reply("❌ No user data found.");
+        const topExp = usersWithExp.sort((a, b) => b.exp - a.exp).slice(0, 15);
+        const medals = ["🥇", "🥈", "🥉"];
+        const topList = topExp.map((user, index) => {
+          const rank = index < 3 ? medals[index] : toBoldNumbers(index + 1);
+          const name = toBoldUnicode(user.name || "Unknown");
+          return `${rank}. ${name}: ${formatNumber(user.exp)} EXP`;
+        });
 
-    let sortFunc, titleIcon, titleText, valueFormat;
-
-    switch (type) {
-      case "coins":
-        sortFunc = (a, b) => (b.coins || 0) - (a.coins || 0);
-        titleIcon = "💰"; titleText = "Richest Players";
-        valueFormat = u => `${u.coins || 0} coins`;
-        break;
-      case "exp":
-        sortFunc = (a, b) => (b.exp || 0) - (a.exp || 0);
-        titleIcon = "⭐"; titleText = "Most Experienced";
-        valueFormat = u => `${u.exp || 0} XP`;
-        break;
-      case "commands":
-        sortFunc = (a, b) => (b.commandCount || 0) - (a.commandCount || 0);
-        titleIcon = "🎮"; titleText = "Most Active";
-        valueFormat = u => `${u.commandCount || 0} commands`;
-        break;
-      default:
-        sortFunc = (a, b) => b.level - a.level || b.exp - a.exp;
-        titleIcon = "🏆"; titleText = "Top Leveled";
-        valueFormat = u => `Level ${u.level || 1} (${u.exp || 0} XP)`;
-        break;
-    }
-
-    const sorted = users.sort(sortFunc).slice(0, 10);
-    let text = `${titleIcon} **${titleText} Leaderboard**\n\n`;
-
-    for (let i = 0; i < sorted.length; i++) {
-      const u = sorted[i];
-      const rank = i + 1;
-      const medal = this.getRankMedal(rank);
-      let name = "Unknown";
-
-      try {
-        const contact = await client.getContactById(u.id);
-        name = contact.name || contact.pushname || u.id.split('@')[0];
-      } catch {
-        name = u.id?.split('@')[0] || "Unknown";
+        return message.reply(`👑 𝗧𝗢𝗣 𝟏𝟓 𝗘𝗫𝗣 𝗨𝗦𝗘𝗥𝗦:\n\n${topList.join("\n")}`);
       }
 
-      if (name.length > 20) name = name.slice(0, 17) + "...";
-      text += `${medal} **${rank}.** ${name}\n   ${valueFormat(u)}\n\n`;
+      // Default: bal
+      const usersWithCoins = allUsers.filter(user => user.coins > 0);
+      if (usersWithCoins.length === 0) return message.reply("❌ No users with coins found.");
+
+      const topCoins = usersWithCoins.sort((a, b) => b.coins - a.coins).slice(0, 15);
+      const medals = ["🥇", "🥈", "🥉"];
+      const topList = topCoins.map((user, index) => {
+        const rank = index < 3 ? medals[index] : toBoldNumbers(index + 1);
+        const name = toBoldUnicode(user.name || "Unknown");
+        return `${rank}. ${name}: ${formatNumber(user.coins)}$`;
+      });
+
+      return message.reply(`👑 | 𝐓𝐨𝐩 𝟏𝟓 𝐑𝐢𝐜𝐡𝐞𝐬𝐭 𝐔𝐬𝐞𝐫𝐬:\n\n${topList.join("\n")}`);
+
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ An error occurred while fetching the leaderboard.");
     }
-
-    text += `📊 **Total Players:** ${users.length}\n🎯 **Use !profile to check your stats!**`;
-    await message.reply(text);
-    log(`Leaderboard (${type}) shown`, "info");
-  },
-
-  getRankMedal(rank) {
-    return { 1: "🥇", 2: "🥈", 3: "🥉", 4: "🏅", 5: "🏅" }[rank] || "▪️";
   }
 };
+
+// Format large numbers
+function formatNumber(num) {
+  const units = ["", "𝐊", "𝐌", "𝐁", "𝐓", "𝐐", "𝐐𝐢", "𝐒𝐱", "𝐒𝐩", "𝐎𝐜", "𝐍", "𝐃"];
+  let unit = 0;
+  while (num >= 1000 && unit < units.length - 1) {
+    num /= 1000;
+    unit++;
+  }
+  return Number(num.toFixed(1)) + units[unit];
+}
+
+// Convert number to bold
+function toBoldNumbers(number) {
+  const bold = { "0": "𝟎", "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗" };
+  return number.toString().split('').map(c => bold[c] || c).join('');
+}
+
+// Convert name to bold Unicode
+function toBoldUnicode(text) {
+  const bold = {
+    "a": "𝐚", "b": "𝐛", "c": "𝐜", "d": "𝐝", "e": "𝐞", "f": "𝐟", "g": "𝐠", "h": "𝐡", "i": "𝐢", "j": "𝐣",
+    "k": "𝐤", "l": "𝐥", "m": "𝐦", "n": "𝐧", "o": "𝐨", "p": "𝐩", "q": "𝐪", "r": "𝐫", "s": "𝐬", "t": "𝐭",
+    "u": "𝐮", "v": "𝐯", "w": "𝐰", "x": "𝐱", "y": "𝐲", "z": "𝐳",
+    "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
+    "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
+    "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙", " ": " ", "'": "'", ",": ",", ".": ".", "-": "-"
+  };
+  return text.split('').map(c => bold[c] || c).join('');
+}
