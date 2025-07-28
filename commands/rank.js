@@ -1,62 +1,41 @@
 // File: rank.js
 // Author: tas33n | Fixed by Rahaman Leon
-// Description: Check user rank and XP system
 
-const fs = require('fs-extra');
-const path = require('path');
+const { getUserData, log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
     name: "rank",
-    aliases: ["level", "xp",],
-    version: "1.1",
-    author: "xxxxxxx",
+    aliases: ["level", "xp"],
+    version: "1.2",
+    author: "tas33n | Rahaman Leon",
     coolDown: 3,
     role: 0,
     description: "Check your current rank and XP",
     category: "info",
     guide: {
-      en: "{prefix}rank - Check your current rank and XP\n" +
-          "{prefix}rank @user - Check another user's rank\n" +
-          "{prefix}rank top - Show top 10 leaderboard"
+      en: "{prefix}rank - Check your rank\n{prefix}rank @user - Check someone else's rank\n{prefix}rank top - View top 10 leaderboard"
     }
   },
 
-  onStart: async function ({ message, client, args, contact, chat, isGroup }) {
+  onStart: async function ({ message, client, args, contact }) {
     try {
-      const config = require('../config.json');
-      const dbPath = path.resolve(__dirname, '..', config.database.path);
-      
-      // Ensure database exists
-      if (!await fs.pathExists(dbPath)) {
-        return await message.reply("⚠️ No ranking data found. Start chatting to gain XP!");
-      }
+      const User = require('../models/User');
 
-      const data = await fs.readJSON(dbPath);
-
-      // Initialize users object if it doesn't exist
-      if (!data.users) {
-        data.users = {};
-        await fs.writeJSON(dbPath, data, { spaces: 2 });
-      }
-
-      // Check if this is a leaderboard request
       if (args[0] && args[0].toLowerCase() === 'top') {
-        return await this.showLeaderboard(message, client, data);
+        return await this.showLeaderboard(message, client);
       }
 
-      // Determine target user
       let targetUserId = contact.id._serialized;
       let targetName = contact.name || contact.pushname || "You";
 
-      // Check if user mentioned someone or replied to someone
       if (message.hasQuotedMsg) {
         const quotedMsg = await message.getQuotedMessage();
         targetUserId = quotedMsg.author || quotedMsg.from;
         try {
           const targetContact = await client.getContactById(targetUserId);
           targetName = targetContact.name || targetContact.pushname || targetUserId.split('@')[0];
-        } catch (error) {
+        } catch {
           targetName = targetUserId.split('@')[0];
         }
       } else {
@@ -67,142 +46,84 @@ module.exports = {
         }
       }
 
-      // Check if target user has data
-      if (!data.users[targetUserId]) {
-        const isOwnProfile = targetUserId === contact.id._serialized;
-        const pronoun = isOwnProfile ? "You're" : `${targetName} is`;
-        return await message.reply(`❌ ${pronoun} not ranked yet. ${isOwnProfile ? 'Start' : 'They need to start'} messaging to gain XP!`);
-      }
-
-      // Get all users and sort by experience points
-      const allUsers = Object.entries(data.users)
-        .map(([id, info]) => ({
-          id,
-          exp: info.exp || 0,
-          level: info.level || 1,
-          messageCount: info.messageCount || 0,
-          coins: info.coins || 0,
-          lastActive: info.lastActive || 0
-        }))
-        .sort((a, b) => b.exp - a.exp);
-
-      // Find user's rank
+      const allUsers = await User.find().sort({ exp: -1 });
+      const targetUser = await getUserData(targetUserId);
       const rank = allUsers.findIndex(u => u.id === targetUserId) + 1;
-      const userInfo = data.users[targetUserId];
-      const userExp = userInfo.exp || 0;
-      const userLevel = userInfo.level || 1;
-      const userMessages = userInfo.messageCount || 0;
-      const userCoins = userInfo.coins || 0;
 
-      // Calculate XP needed for next level
-      const xpForCurrentLevel = this.getXPForLevel(userLevel);
-      const xpForNextLevel = this.getXPForLevel(userLevel + 1);
-      const xpProgress = Math.max(0, userExp - xpForCurrentLevel);
-      const xpNeeded = Math.max(0, xpForNextLevel - userExp);
+      const xpForCurrent = this.getXPForLevel(targetUser.level);
+      const xpForNext = this.getXPForLevel(targetUser.level + 1);
+      const progress = Math.max(0, targetUser.exp - xpForCurrent);
+      const needed = Math.max(0, xpForNext - targetUser.exp);
 
-      // Create progress bar
-      const progressBarLength = 10;
-      const xpRange = xpForNextLevel - xpForCurrentLevel;
-      const progressPercent = xpRange > 0 ? Math.max(0, Math.min(xpProgress / xpRange, 1)) : 0;
-      const filledBars = Math.max(0, Math.floor(progressPercent * progressBarLength));
-      const emptyBars = Math.max(0, progressBarLength - filledBars);
-      const progressBar = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
+      const percent = Math.max(0, Math.min(progress / (xpForNext - xpForCurrent), 1));
+      const filled = Math.floor(percent * 10);
+      const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
 
-      // Format last active
-      const lastActiveText = userInfo.lastActive ? 
-        this.formatTimeAgo(Date.now() - userInfo.lastActive) : 'Unknown';
+      const lastActiveAgo = targetUser.lastActive ? this.formatTimeAgo(Date.now() - targetUser.lastActive) : 'Unknown';
 
-      const isOwnProfile = targetUserId === contact.id._serialized;
-      const title = isOwnProfile ? "🏆 Your Rank Info" : `🏆 ${targetName}'s Rank Info`;
-      const possessive = isOwnProfile ? "Your" : `${targetName}'s`;
+      const isOwn = targetUserId === contact.id._serialized;
+      const title = isOwn ? "🏆 Your Rank Info" : `🏆 ${targetName}'s Rank Info`;
 
-      const response = `
+      const msg = `
 ${title}
 ━━━━━━━━━━━━━━━━━━━━━
-🔸 **Rank:** #${rank} out of ${allUsers.length}
-🔸 **Level:** ${userLevel}
-🔸 **Experience:** ${userExp.toLocaleString()} XP
-🔸 **Messages:** ${userMessages.toLocaleString()}
-🔸 **Coins:** ${userCoins.toLocaleString()}
-🔸 **Last Active:** ${lastActiveText}
+🔸 Rank: #${rank} of ${allUsers.length}
+🔸 Level: ${targetUser.level}
+🔸 XP: ${targetUser.exp.toLocaleString()}
+🔸 Messages: ${targetUser.messageCount?.toLocaleString() || 0}
+🔸 Coins: ${targetUser.coins?.toLocaleString() || 0}
+🔸 Last Active: ${lastActiveAgo}
 ━━━━━━━━━━━━━━━━━━━━━
-📊 **Progress to Level ${userLevel + 1}:**
-${progressBar} ${Math.round(progressPercent * 100)}%
-⚡ **XP Needed:** ${xpNeeded.toLocaleString()} XP
-
-💡 *Tip: Send messages to gain XP and climb the ranks!*
+📊 Progress to Level ${targetUser.level + 1}:
+${bar} ${Math.round(percent * 100)}%
+⚡ XP Needed: ${needed.toLocaleString()} XP
+💡 Tip: Send messages to gain XP and climb ranks!
       `.trim();
 
-      return await message.reply(response);
+      await message.reply(msg);
 
-    } catch (error) {
-      console.error("Error in rank command:", error);
-      return await message.reply("❌ An error occurred while fetching rank data. Please try again.");
+    } catch (err) {
+      log(`Rank error: ${err.message}`, 'error');
+      await message.reply("❌ Error fetching rank info.");
     }
   },
 
-  // Show leaderboard
-  async showLeaderboard(message, client, data) {
+  async showLeaderboard(message, client) {
+    const User = require('../models/User');
     try {
-      if (!data.users || Object.keys(data.users).length === 0) {
-        return await message.reply("📊 No users in the leaderboard yet!");
-      }
+      const top = await User.find().sort({ exp: -1 }).limit(10);
+      if (!top.length) return await message.reply("📊 No users on the leaderboard yet!");
 
-      // Get top 10 users
-      const topUsers = Object.entries(data.users)
-        .map(([id, info]) => ({
-          id,
-          exp: info.exp || 0,
-          level: info.level || 1,
-          messageCount: info.messageCount || 0
-        }))
-        .sort((a, b) => b.exp - a.exp)
-        .slice(0, 10);
+      let text = "🏆 Top 10 Leaderboard\n━━━━━━━━━━━━━━━━━━━━━\n";
 
-      let leaderboard = "🏆 **Top 10 Leaderboard**\n━━━━━━━━━━━━━━━━━━━━━\n";
-
-      for (let i = 0; i < topUsers.length; i++) {
-        const user = topUsers[i];
-        let userName;
-
+      for (let i = 0; i < top.length; i++) {
+        const u = top[i];
+        let name = u.id.split('@')[0];
         try {
-          const contact = await client.getContactById(user.id);
-          userName = contact.name || contact.pushname || user.id.split('@')[0];
-        } catch (error) {
-          userName = user.id.split('@')[0];
-        }
-
+          const c = await client.getContactById(u.id);
+          name = c.name || c.pushname || name;
+        } catch {}
         const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
-        leaderboard += `${medal} **${userName}**\n`;
-        leaderboard += `   Level ${user.level} • ${user.exp.toLocaleString()} XP\n\n`;
+        text += `${medal} ${name}\n   Level ${u.level} • ${u.exp.toLocaleString()} XP\n\n`;
       }
 
-      leaderboard += "💡 *Keep chatting to climb the ranks!*";
-
-      return await message.reply(leaderboard);
-
-    } catch (error) {
-      console.error("Error showing leaderboard:", error);
-      return await message.reply("❌ Error loading leaderboard.");
+      text += "💡 Keep chatting to rank up!";
+      await message.reply(text);
+    } catch (err) {
+      log(`Leaderboard error: ${err.message}`, 'error');
+      await message.reply("❌ Failed to load leaderboard.");
     }
   },
 
-  // Calculate XP required for a specific level
   getXPForLevel(level) {
-    // XP formula: level^2 * 50 (gets harder as level increases)
     return Math.floor(Math.pow(level, 2) * 50);
   },
 
-  // Format time ago
   formatTimeAgo(ms) {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return `${seconds}s ago`;
+    const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24);
+    if (d > 0) return `${d}d ago`;
+    if (h > 0) return `${h}h ago`;
+    if (m > 0) return `${m}m ago`;
+    return `${s}s ago`;
   }
 };
