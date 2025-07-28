@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "all",
     version: "1.2",
-    author: "Mahmud (adapted from NTKhang)",
+    author: "MahMUD (adapted from NTKhang)",
     countDown: 5,
     role: 1,
     description: "Tag all members in your WhatsApp group chat",
