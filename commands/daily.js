@@ -31,97 +31,111 @@ module.exports = {
       saturday: "Saturday",
       sunday: "Sunday",
       alreadyReceived: "❌ You have already received today's gift!\nCome back tomorrow for your next reward.",
-      received: "🎁 **Daily Reward Claimed!**\n\n💰 Coins: +{coin}\n⭐ Experience: +{exp}\n\n💼 Total Coins: {totalCoins}\n🏆 Total EXP: {totalExp}",
-      rewardInfo: "📅 **Daily Reward Information**\n\n{rewardList}\n\n💡 Rewards increase by 20% each day!\n⏰ Reset time: Midnight (Asia/Dhaka)"
+      received: "🎁 *Daily Reward Claimed!*\n\n💰 Coins: +%1\n⭐ Experience: +%2\n\n💼 Total Coins: %3\n🏆 Total EXP: %4",
+      rewardInfo: "📅 *Daily Reward Information*\n\n%1\n\n💡 Rewards increase by 20% each day!\n⏰ Reset time: Midnight (Asia/Dhaka)"
     }
   },
 
   onStart: async function ({ message, args, contact, config, prefix }) {
     try {
-      const userId = contact?.id?._serialized;
-      if (!userId) {
-        return await message.reply("❌ Unable to identify user.");
-      }
-
+      const userId = contact.id._serialized;
       const reward = this.rewardConfig;
 
-      // If user wants reward info
+      // "info" argument = show reward table
       if (args[0] === "info") {
         let rewardList = "";
+
         for (let i = 1; i <= 7; i++) {
-          const getCoin = Math.floor(reward.coin * (1 + 0.2) ** ((i === 7 ? 0 : i) - 1));
-          const getExp = Math.floor(reward.exp * (1 + 0.2) ** ((i === 7 ? 0 : i) - 1));
+          const coin = Math.floor(reward.coin * (1 + 0.2) ** (i - 1));
+          const exp = Math.floor(reward.exp * (1 + 0.2) ** (i - 1));
           const dayName = this.getDayName(i);
-          rewardList += `${dayName}: ${getCoin} coins, ${getExp} exp\n`;
+          rewardList += `📆 ${dayName}: ${coin} coins, ${exp} exp\n`;
         }
 
-        const infoMessage = this.langs.en.rewardInfo.replace("{rewardList}", rewardList.trim());
-        return await message.reply(infoMessage);
+        const msg = this.langs.en.rewardInfo.replace("%1", rewardList.trim());
+        return await message.reply(msg);
       }
 
-      // Time and date check
-      const currentTime = moment.tz(config?.bot?.timezone || "Asia/Dhaka");
+      // Get current date
+      const currentTime = moment.tz(config.bot.timezone || "Asia/Dhaka");
       const dateString = currentTime.format("DD/MM/YYYY");
-      const currentDay = currentTime.day(); // Sunday = 0
+      const currentDay = currentTime.day(); // 0=Sun, 1=Mon...
 
-      // Fetch user data
-      const userData = await getUserData(userId);
+      // Get user data
+      let userData = await getUserData(userId);
+
+      // If no data, create default user
       if (!userData) {
-        return await message.reply("❌ Failed to retrieve your user data.");
+        const defaultData = {
+          coins: 0,
+          exp: 0,
+          level: 1,
+          lastDailyReward: null,
+          lastActive: Date.now()
+        };
+        await updateUserData(userId, defaultData);
+        userData = defaultData;
       }
 
-      // Already claimed check
+      // Already claimed?
       if (userData.lastDailyReward === dateString) {
         return await message.reply(this.langs.en.alreadyReceived);
       }
 
+      // Determine reward for current day
       const dayIndex = currentDay === 0 ? 7 : currentDay;
       const getCoin = Math.floor(reward.coin * (1 + 0.2) ** (dayIndex - 1));
       const getExp = Math.floor(reward.exp * (1 + 0.2) ** (dayIndex - 1));
 
-      // Update user
+      // Ensure safe defaults
+      const currentCoins = typeof userData.coins === 'number' ? userData.coins : 0;
+      const currentExp = typeof userData.exp === 'number' ? userData.exp : 0;
+      const currentLevel = typeof userData.level === 'number' ? userData.level : 1;
+
+      // Update user data
       const updatedData = await updateUserData(userId, {
-        coins: (userData.coins || 0) + getCoin,
-        exp: (userData.exp || 0) + getExp,
+        coins: currentCoins + getCoin,
+        exp: currentExp + getExp,
         lastDailyReward: dateString,
         lastActive: Date.now()
       });
 
+      // Level up check
       const newLevel = this.calculateLevel(updatedData.exp);
-      if (newLevel > (userData.level || 1)) {
+      if (newLevel > currentLevel) {
         await updateUserData(userId, { level: newLevel });
         updatedData.level = newLevel;
       }
 
-      const successMessage = this.langs.en.received
-        .replace("{coin}", getCoin)
-        .replace("{exp}", getExp)
-        .replace("{totalCoins}", updatedData.coins)
-        .replace("{totalExp}", updatedData.exp);
+      // Build success message
+      const msg = this.langs.en.received
+        .replace("%1", getCoin)
+        .replace("%2", getExp)
+        .replace("%3", updatedData.coins)
+        .replace("%4", updatedData.exp);
 
-      await message.reply(successMessage);
+      await message.reply(msg);
 
-      log(`✅ ${contact.name || contact.number} claimed daily: +${getCoin} coins, +${getExp} exp`, "info");
+      // Log action
+      log(`🎁 ${contact.name || contact.number} claimed daily: ${getCoin} coins, ${getExp} exp`, "info");
 
     } catch (error) {
-      console.error("❌ Daily command error:", error);
-      log(`❌ Daily command error: ${error.message}`, "error");
-      await message.reply("❌ An error occurred while processing your daily reward. Please try again later.");
+      console.error("❌ Error in daily command:", error);
+      return message.reply("❌ Failed to retrieve your user data.");
     }
   },
 
   getDayName(dayIndex) {
-    const names = this.langs.en;
-    const dayNames = {
-      1: names.monday,
-      2: names.tuesday,
-      3: names.wednesday,
-      4: names.thursday,
-      5: names.friday,
-      6: names.saturday,
-      7: names.sunday
+    const days = {
+      1: this.langs.en.monday,
+      2: this.langs.en.tuesday,
+      3: this.langs.en.wednesday,
+      4: this.langs.en.thursday,
+      5: this.langs.en.friday,
+      6: this.langs.en.saturday,
+      7: this.langs.en.sunday
     };
-    return dayNames[dayIndex] || "Unknown";
+    return days[dayIndex] || "Unknown";
   },
 
   calculateLevel(exp) {
