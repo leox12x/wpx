@@ -1,37 +1,52 @@
+const { getUserData, getGroupData, log } = require('../scripts/helpers');
+
 module.exports = {
   config: {
     name: "all",
-    version: "1.3",
-    author: "Mahmud",
+    version: "1.2",
+    author: "NTKhang (Modified by Mahmud)",
     countDown: 5,
     role: 1,
-    description: "Tag all members in your WhatsApp group chat",
+    description: {
+      vi: "Tag tất cả thành viên trong nhóm chat của bạn",
+      en: "Tag all members in your group chat"
+    },
     category: "box chat",
     guide: {
-      en: "Usage: !all [optional message]"
+      vi: "{pn} [nội dung | để trống]",
+      en: "{pn} [content | empty]"
     }
   },
 
-  onStart: async function ({ message, args, client }) {
+  onStart: async function ({ message, event, args }) {
     try {
-      const chat = await message.getChat();
-      if (!chat.isGroup) {
-        return message.reply("❌ This command only works in group chats.");
-      }
+      const groupId = event.chatId || event.groupID || event.remoteJid;
+      const senderId = event.senderID || event.from;
 
-      const text = args.join(" ") || "🟢 Attention everyone!";
+      // Fetch user & group data (MongoDB)
+      await getUserData(senderId);
+      await getGroupData(groupId);
+
+      const content = args.join(" ") || "@all";
+
       const mentions = [];
+      const { participantIDs } = event;
 
-      for (const participant of chat.participants) {
-        const contact = await client.getContactById(participant.id._serialized);
-        mentions.push(contact);
+      if (!participantIDs || participantIDs.length === 0)
+        return message.reply("❌ No group participants found.");
+
+      for (const id of participantIDs) {
+        mentions.push({
+          tag: content,
+          id
+        });
       }
 
-      await message.reply(text, undefined, { mentions });
+      await message.reply({ body: content, mentions });
 
-    } catch (err) {
-      console.error("❌ Error in !all command:", err);
-      message.reply("❌ Failed to mention everyone. Please try again.");
+    } catch (error) {
+      log(`❌ Error in all.js: ${error.message}`, "error");
+      await message.reply("⚠️ Failed to tag all members.");
     }
   }
 };
