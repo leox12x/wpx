@@ -1,5 +1,6 @@
 const axios = require("axios");
 
+// Get base API URL from remote config
 const baseApiUrl = async () => {
   const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
   return base.data.mahmud;
@@ -14,38 +15,45 @@ module.exports = {
     role: 0,
     category: "media",
     guide: {
-      en: "{pn} <text> (or reply to a message)"
+      en: "say <text> (or reply to a message)"
     }
   },
 
-  onStart: async function ({ message, args, event }) {
-    let text = args.join(" ");
-
-    // Check if reply text exists
-    if (event.message?.contextInfo?.quotedMessage?.conversation) {
-      text = event.message.contextInfo.quotedMessage.conversation;
-    }
-
-    if (!text) {
-      return message.reply("⚠️ দয়া করে কিছু লিখুন বা একটি মেসেজে রিপ্লাই দিন!");
-    }
-
+  onStart: async function ({ api, message, args, event }) {
     try {
-      const baseUrl = await baseApiUrl();
-      const response = await axios.get(`${baseUrl}/api/say`, {
+      // Get user input or fallback to replied message
+      let text = args.join(" ");
+      if (event.type === "message_reply" && event.messageReply?.body) {
+        text = event.messageReply.body;
+      }
+
+      // Validate input
+      if (!text || text.trim().length === 0) {
+        return message.reply("⚠️ দয়া করে কিছু লিখুন অথবা একটি মেসেজে রিপ্লাই দিন!");
+      }
+
+      const apiUrl = await baseApiUrl();
+
+      // Fetch audio stream from the API
+      const response = await axios.get(`${apiUrl}/api/say`, {
         params: { text },
-        headers: { "Author": module.exports.config.author },
-        responseType: "stream",
+        headers: { Author: module.exports.config.author },
+        responseType: "stream"
       });
 
-      message.reply({
+      // Check for API error
+      if (response.data?.error) {
+        return message.reply(`❌ ${response.data.error}`);
+      }
+
+      return message.reply({
         body: "",
-        attachment: response.data,
+        attachment: response.data
       });
 
-    } catch (e) {
-      console.error("API Error:", e.response ? e.response.data : e.message);
-      message.reply("🥹 Error, contact MahMUD.\n" + (e.response?.data?.error || e.message));
+    } catch (error) {
+      console.error("❌ Say command error:", error.message);
+      return message.reply("🥹 An error occurred while processing your request. Please contact MahMUD.");
     }
   }
 };
