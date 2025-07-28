@@ -21,10 +21,10 @@
     "enabled": false,
     "whiteListIds": []
   },
-"database": {
+  "database": {
     "type": "mongodb",
+    "uri": "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0",
     "path": "./data/database.json",
-    "mongoURI": "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0",
     "autoSync": true
   },
   "dashBoard": {
