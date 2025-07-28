@@ -3,17 +3,13 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "slot",
-    version: "1.2",
+    version: "1.3",
     author: "MahMUD",
     countDown: 10,
     role: 0,
-    shortDescription: {
-      en: "Slot game",
-    },
-    longDescription: {
-      en: "Slot game.",
-    },
-    category: "game",
+    shortDescription: { en: "Slot game" },
+    longDescription: { en: "Play the slot game and win coins!" },
+    category: "game"
   },
 
   onStart: async function ({ args, message, event }) {
@@ -26,41 +22,37 @@ module.exports = {
         return message.reply("❌ Please enter a valid positive bet amount.");
       }
 
-      let amount = parseInt(args[0]);
-
+      const amount = parseInt(args[0]);
       if (amount > 10000000) {
         return message.reply("❌ The maximum bet amount is 10M.");
       }
 
-      // Get user data from DB
       let userData = await getUserData(senderID);
+      userData.coins = userData.coins || 0;
+      userData.slots = userData.slots || { count: 0, firstSlot: Date.now() };
 
-      if (userData.money < amount) {
-        return message.reply("❌ You don't have enough money.");
-      }
-
-      // Initialize slots data if missing
-      if (!userData.slots) {
-        userData.slots = { count: 0, firstSlot: Date.now() };
+      if (userData.coins < amount) {
+        return message.reply("❌ You don't have enough coins.");
       }
 
       const now = Date.now();
       const timeElapsed = now - userData.slots.firstSlot;
 
       if (timeElapsed > slotTimeLimit) {
-        userData.slots = { count: 0, firstSlot: now };
+        userData.slots.count = 0;
+        userData.slots.firstSlot = now;
       }
 
       if (userData.slots.count >= maxlimit) {
         const timeLeft = slotTimeLimit - timeElapsed;
         const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        return message.reply(`❌ You have reached your slot limit. Try again in ${hoursLeft}h ${minutesLeft}m.`);
+        return message.reply(`❌ Slot limit reached. Try again in ${hoursLeft}h ${minutesLeft}m.`);
       }
 
       userData.slots.count++;
 
-      // Spin slots
+      // Spin the slots
       const slots = ["❤", "💜", "🖤", "🤍", "🤎", "💙", "💚", "💛"];
       const slot1 = slots[Math.floor(Math.random() * slots.length)];
       const slot2 = slots[Math.floor(Math.random() * slots.length)];
@@ -68,50 +60,37 @@ module.exports = {
 
       const winnings = calculateWinnings(slot1, slot2, slot3, amount);
 
-      // Update user money and slots data
-      userData.money += winnings;
+      userData.coins += winnings;
 
-      await updateUserData(senderID, {
-        money: userData.money,
-        slots: userData.slots
-      });
+      await updateUserData(senderID, userData);
 
-      // Prepare message
-      const spinCount = ">🎀";
-      let messageText = getSpinResultMessage(slot1, slot2, slot3, winnings);
+      const spinPrefix = ">🎀";
+      const resultText = getSpinResultMessage(slot1, slot2, slot3, winnings);
+      return message.reply(`${spinPrefix}\n${resultText}`);
 
-      return message.reply(`${spinCount}\n${messageText}`);
-
-    } catch (error) {
-      log(`Slot command error: ${error.message}`, "error");
-      return message.reply("❌ An error occurred while playing the slot game.");
+    } catch (err) {
+      log(`❌ Slot Error: ${err.message}`, "error");
+      return message.reply("❌ Something went wrong with the slot game.");
     }
   }
 };
 
-function calculateWinnings(slot1, slot2, slot3, bet) {
-  if (slot1 === "❤" && slot2 === "❤" && slot3 === "❤") {
-    return bet * 10;
-  } else if (slot1 === "💜" && slot2 === "💜" && slot3 === "💜") {
-    return bet * 5;
-  } else if (slot1 === slot2 && slot2 === slot3) {
-    return bet * 3;
-  } else if (slot1 === slot2 || slot1 === slot3 || slot2 === slot3) {
-    return bet * 3;
-  } else {
-    return -bet;
-  }
+function calculateWinnings(s1, s2, s3, bet) {
+  if (s1 === "❤" && s2 === "❤" && s3 === "❤") return bet * 10;
+  else if (s1 === "💜" && s2 === "💜" && s3 === "💜") return bet * 5;
+  else if (s1 === s2 && s2 === s3) return bet * 3;
+  else if (s1 === s2 || s1 === s3 || s2 === s3) return Math.floor(bet * 1.5);
+  else return -bet;
 }
 
-function getSpinResultMessage(slot1, slot2, slot3, winnings) {
+function getSpinResultMessage(s1, s2, s3, winnings) {
   if (winnings > 0) {
-    if (slot1 === "❤" && slot2 === "❤" && slot3 === "❤") {
-      return `🎉 Jackpot! You won ${formatMoney(winnings)} with three ❤ symbols!`;
-    } else {
-      return `🎉 You won ${formatMoney(winnings)}!\n• Game results [ ${slot1} | ${slot2} | ${slot3} ]`;
+    if (s1 === "❤" && s2 === "❤" && s3 === "❤") {
+      return `🎉 *Jackpot!* You won ${formatMoney(winnings)} with [ ${s1} | ${s2} | ${s3} ]`;
     }
+    return `🎉 You won ${formatMoney(winnings)}!\n• Game results [ ${s1} | ${s2} | ${s3} ]`;
   } else {
-    return `😞 You lost ${formatMoney(-winnings)}.\n• Game results [ ${slot1} | ${slot2} | ${slot3} ]`;
+    return `😞 You lost ${formatMoney(-winnings)}.\n• Game results [ ${s1} | ${s2} | ${s3} ]`;
   }
 }
 
@@ -123,4 +102,4 @@ function formatMoney(num) {
     unit++;
   }
   return Number(num.toFixed(1)) + units[unit];
-          }
+}
