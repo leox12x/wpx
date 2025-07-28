@@ -54,7 +54,7 @@ async function getUserData(userId, name = null) {
   if (!user) {
     user = new User({
       id: userId,
-      name: name || userId, // Save name if provided
+      name: name || userId,
       coins: 0,
       exp: 0,
       level: 1,
@@ -67,7 +67,6 @@ async function getUserData(userId, name = null) {
   }
   return user;
 }
-
 
 // Update user data
 async function updateUserData(userId, updates) {
