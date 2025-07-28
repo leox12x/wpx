@@ -86,7 +86,7 @@ async function getUserData(userId) {
 async function updateUserData(userId, updates) {
     const config = require('../config.json');
     
-    if (config.database.type === 'json') {
+    if (config.database.type === 'mongodb') {
         const dbPath = path.join(__dirname, '..', config.database.path);
         const data = await fs.readJSON(dbPath);
         
@@ -116,7 +116,7 @@ async function updateUserData(userId, updates) {
 async function getGroupData(groupId) {
     const config = require('../config.json');
     
-    if (config.database.type === 'json') {
+    if (config.database.type === 'mongodb') {
         const dbPath = path.join(__dirname, '..', config.database.path);
         const data = await fs.readJSON(dbPath);
         
@@ -144,7 +144,7 @@ async function getGroupData(groupId) {
 async function updateGroupData(groupId, updates) {
     const config = require('../config.json');
     
-    if (config.database.type === 'json') {
+    if (config.database.type === 'mongodb') {
         const dbPath = path.join(__dirname, '..', config.database.path);
         const data = await fs.readJSON(dbPath);
         
