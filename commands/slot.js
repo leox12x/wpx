@@ -1,106 +1,98 @@
-const { getUserData, updateUserData, log } = require('../scripts/helpers');
+const { getUserData, updateUserData, log } = require('../database'); // adjust path if needed
 
 module.exports = {
   config: {
     name: "slot",
+    aliases: ["spin"],
     version: "1.3",
-    author: "MahMUD",
-    countDown: 10,
+    author: "Mahmud",
+    countDown: 5,
     role: 0,
-    shortDescription: { en: "Slot game" },
-    longDescription: { en: "Play the slot game and win coins!" },
-    category: "game"
+    description: "Play slot and win coins!",
+    category: "game",
+    guide: {
+      en: "Use: slot <bet>"
+    }
   },
 
-  onStart: async function (context) {
+  onStart: async function ({ message, event, args }) {
     try {
-      const { args, message, event } = context;
-      const senderID = event?.senderID;
-      if (!senderID) return message.reply("❌ Missing sender ID.");
-
-      const maxlimit = 20;
-      const slotTimeLimit = 10 * 60 * 60 * 1000; // 10 hours
-
-      if (!args[0] || isNaN(args[0]) || Number(args[0]) <= 0) {
-        return message.reply("❌ Please enter a valid positive bet amount.");
+      if (!event || !event.senderID) {
+        log("❌ Slot Error: senderID not found", "error");
+        return message.reply("❌ Internal error: Missing sender ID.");
       }
 
-      const amount = parseInt(args[0]);
-      if (amount > 10000000) {
-        return message.reply("❌ The maximum bet amount is 10M.");
+      const senderID = event.senderID;
+      const maxLimit = 20;
+      const slotCooldown = 10 * 60 * 60 * 1000; // 10 hours
+
+      if (!args[0] || isNaN(args[0]) || parseInt(args[0]) <= 0) {
+        return message.reply("❌ Enter a valid bet amount.");
       }
 
-      let userData = await getUserData(senderID);
-      userData.coins = userData.coins || 0;
-      userData.slots = userData.slots || { count: 0, firstSlot: Date.now() };
+      const bet = parseInt(args[0]);
+      if (bet > 10000000) {
+        return message.reply("❌ Max bet is 10M.");
+      }
 
-      if (userData.coins < amount) {
-        return message.reply("❌ You don't have enough coins.");
+      const user = await getUserData(senderID);
+
+      // Init slot if not present
+      if (!user.slots) {
+        user.slots = {
+          count: 0,
+          firstSlot: Date.now()
+        };
       }
 
       const now = Date.now();
-      const timeElapsed = now - userData.slots.firstSlot;
+      const timePassed = now - user.slots.firstSlot;
 
-      if (timeElapsed > slotTimeLimit) {
-        userData.slots.count = 0;
-        userData.slots.firstSlot = now;
+      if (timePassed > slotCooldown) {
+        user.slots.count = 0;
+        user.slots.firstSlot = now;
       }
 
-      if (userData.slots.count >= maxlimit) {
-        const timeLeft = slotTimeLimit - timeElapsed;
-        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
-        const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        return message.reply(`❌ Slot limit reached. Try again in ${hoursLeft}h ${minutesLeft}m.`);
+      if (user.slots.count >= maxLimit) {
+        const timeLeft = slotCooldown - timePassed;
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        return message.reply(`⏳ You've used all ${maxLimit} slot plays.\nWait ${hours}h ${minutes}m to play again.`);
       }
 
-      userData.slots.count++;
+      if (user.coins < bet) {
+        return message.reply(`💰 You only have ${user.coins} coins.`);
+      }
 
-      const slots = ["❤", "💜", "🖤", "🤍", "🤎", "💙", "💚", "💛"];
-      const slot1 = slots[Math.floor(Math.random() * slots.length)];
-      const slot2 = slots[Math.floor(Math.random() * slots.length)];
-      const slot3 = slots[Math.floor(Math.random() * slots.length)];
+      const slots = ['🍒', '🍋', '🍉', '⭐', '7️⃣'];
+      const spin = () => slots[Math.floor(Math.random() * slots.length)];
+      const result = [spin(), spin(), spin()];
 
-      const winnings = calculateWinnings(slot1, slot2, slot3, amount);
-      userData.coins += winnings;
+      let win = false;
+      let winAmount = 0;
 
-      await updateUserData(senderID, userData);
+      if (result[0] === result[1] && result[1] === result[2]) {
+        win = true;
+        winAmount = bet * 5;
+      } else if (result[0] === result[1] || result[1] === result[2] || result[0] === result[2]) {
+        win = true;
+        winAmount = bet * 2;
+      }
 
-      const spinPrefix = ">🎀";
-      const resultText = getSpinResultMessage(slot1, slot2, slot3, winnings);
-      return message.reply(`${spinPrefix}\n${resultText}`);
+      user.slots.count++;
+      user.coins += win ? (winAmount - bet) : -bet;
 
+      await updateUserData(senderID, {
+        coins: user.coins,
+        slots: user.slots
+      });
+
+      const resultMessage = `🎰 [ ${result.join(" | ")} ]\n${win ? `🎉 You won ${winAmount} coins!` : `😢 You lost ${bet} coins.`}\n💼 Balance: ${user.coins} coins`;
+
+      return message.reply(resultMessage);
     } catch (err) {
       log(`❌ Slot Error: ${err.message}`, "error");
-      return context?.message?.reply("❌ Something went wrong with the slot game.");
+      return message.reply("❌ Error playing slot. Try again later.");
     }
   }
 };
-
-function calculateWinnings(s1, s2, s3, bet) {
-  if (s1 === "❤" && s2 === "❤" && s3 === "❤") return bet * 10;
-  else if (s1 === "💜" && s2 === "💜" && s3 === "💜") return bet * 5;
-  else if (s1 === s2 && s2 === s3) return bet * 3;
-  else if (s1 === s2 || s1 === s3 || s2 === s3) return Math.floor(bet * 1.5);
-  else return -bet;
-}
-
-function getSpinResultMessage(s1, s2, s3, winnings) {
-  if (winnings > 0) {
-    if (s1 === "❤" && s2 === "❤" && s3 === "❤") {
-      return `🎉 *Jackpot!* You won ${formatMoney(winnings)} with [ ${s1} | ${s2} | ${s3} ]`;
-    }
-    return `🎉 You won ${formatMoney(winnings)}!\n• Game results [ ${s1} | ${s2} | ${s3} ]`;
-  } else {
-    return `😞 You lost ${formatMoney(-winnings)}.\n• Game results [ ${s1} | ${s2} | ${s3} ]`;
-  }
-}
-
-function formatMoney(num) {
-  const units = ["", "𝐊", "𝐌", "𝐁", "𝐓", "𝐐", "𝐐𝐢", "𝐒𝐱", "𝐒𝐩", "𝐎𝐜", "𝐍", "𝐃"];
-  let unit = 0;
-  while (num >= 1000 && unit < units.length - 1) {
-    num /= 1000;
-    unit++;
-  }
-  return Number(num.toFixed(1)) + units[unit];
-}
