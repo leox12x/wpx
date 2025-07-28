@@ -22,7 +22,7 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, args, event, usersData }) {
+  onStart: async function ({ message, args, usersData }) {
     try {
       const input = args.join("").toLowerCase() || "bn";
       const category = input === "en" || input === "english" ? "english" : "bangla";
@@ -45,7 +45,7 @@ module.exports = {
         `╰──────────────────‣\n` +
         `📝 Reply with your answer (A/B/C/D)`;
 
-      message.reply(msg, (err, info) => {
+      message.reply(msg, async (err, info) => {
         global.GoatBot.onReply.set(info.messageID, {
           commandName: this.config.name,
           messageID: info.messageID,
@@ -58,7 +58,7 @@ module.exports = {
         }, 40000);
       });
     } catch (error) {
-      console.error("❌ Quiz fetch error:", error.message);
+      console.error("❌ Quiz error:", error.message);
       message.reply("❌ Failed to fetch quiz. Try again later.");
     }
   },
@@ -69,22 +69,21 @@ module.exports = {
 
     await message.unsend(Reply.messageID);
     const userAnswer = event.body.trim().toLowerCase();
-    const correct = correctAnswer.toLowerCase();
 
-    if (userAnswer === correct) {
-      const coins = 500;
-      const exp = 121;
+    if (userAnswer === correctAnswer.toLowerCase()) {
+      const rewardCoins = 500;
+      const rewardExp = 121;
 
       const userData = await usersData.get(author);
       await usersData.set(author, {
-        coins: userData.coins + coins,
-        exp: userData.exp + exp,
+        coins: userData.coins + rewardCoins,
+        exp: userData.exp + rewardExp,
         data: userData.data
       });
 
-      return message.reply(`✅ Correct Answer Baby!\n🎁 You earned ${coins} coins and ${exp} exp.`);
+      return message.reply(`✅ Correct Answer!\n🎉 You earned ${rewardCoins} coins and ${rewardExp} exp.`);
     } else {
-      return message.reply(`❌ Wrong Answer Baby!\n✅ Correct answer was: ${correctAnswer}`);
+      return message.reply(`❌ Wrong Answer!\n✅ Correct answer was: ${correctAnswer}`);
     }
   }
 };
