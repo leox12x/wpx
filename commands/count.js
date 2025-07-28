@@ -33,18 +33,24 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, args }) {
+  onStart: async function ({ message, args, command }) {
     try {
       const chat = await message.getChat();
       const contact = await message.getContact();
+      const threadID = chat?.id?._serialized;
+      const userID = contact?.id?._serialized;
+      const userName = contact?.pushname || "Unknown";
+      const commandName = command?.config?.name || "unknown";
 
-      if (!chat || !contact) return message.reply("❌ Unable to identify chat or contact.");
+      // Safely track command usage
+      if (userID) {
+        if (!global.commandCount) global.commandCount = {};
+        if (!global.commandCount[userID]) global.commandCount[userID] = {};
+        if (!global.commandCount[userID][commandName]) global.commandCount[userID][commandName] = 0;
+        global.commandCount[userID][commandName]++;
+      }
 
-      const threadID = chat.id?._serialized;
-      const userID = contact.id?._serialized;
-      const userName = contact.pushname || "Unknown";
-
-      if (!threadID || !userID) return message.reply("❌ Missing user or group ID.");
+      if (!threadID || !userID) return message.reply("❌ Unable to identify user or group.");
 
       if (args[0]?.toLowerCase() === "all") {
         const allUsers = await MessageCount.find({ threadID }).sort({ count: -1 }).limit(50);
@@ -68,7 +74,7 @@ module.exports = {
       return message.reply(`✅ ${userName}, you have sent ${userData.count} messages in this group.`);
     } catch (err) {
       console.error("❌ count command error:", err);
-      return message.reply("❌ An error occurred while fetching count.");
+      return message.reply("❌ An error occurred: " + err.message);
     }
   },
 
@@ -76,12 +82,9 @@ module.exports = {
     try {
       const chat = await message.getChat();
       const contact = await message.getContact();
-
-      if (!chat || !contact) return;
-
-      const threadID = chat.id?._serialized;
-      const userID = contact.id?._serialized;
-      const userName = contact.pushname || "Unknown";
+      const threadID = chat?.id?._serialized;
+      const userID = contact?.id?._serialized;
+      const userName = contact?.pushname || "Unknown";
 
       if (!threadID || !userID) return;
 
