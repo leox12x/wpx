@@ -3,37 +3,40 @@ const { getUserData, updateUserData } = require('../scripts/helpers');
 function getSenderId(message) {
   if (!message) return null;
   if (message.from.endsWith('@g.us')) {
-    return message.author || null; // group sender
+    return message.author || null;
   }
-  return message.from || null; // private sender
+  return message.from || null;
 }
 
 module.exports = {
   config: {
     name: "slot",
-    version: "1.3",
+    version: "1.4",
     author: "Mahmud",
     countDown: 5,
     role: 0,
-    description: "Play the slot machine to win or lose coins!",
+    description: "Play slot machine to win or lose coins by betting an amount.",
     category: "economy",
     guide: {
-      en: "Type 'slot' to spin and win coins!"
+      en: "Usage: !slot <betAmount> (e.g., !slot 100)"
     }
   },
 
-  onStart: async function ({ message }) {
+  onStart: async function ({ message, args }) {
     const senderID = getSenderId(message);
     if (!senderID) return message.reply("❌ Cannot determine your ID.");
+
+    const bet = args.length ? parseInt(args[0]) : null;
+    if (!bet || isNaN(bet) || bet <= 0) {
+      return message.reply("❌ Please enter a valid positive bet amount. Example: !slot 100");
+    }
 
     try {
       const userData = await getUserData(senderID);
       if (!userData) return message.reply("❌ User data not found.");
 
-      const bet = 10; // You can extend to parse bet from args
-
       if (userData.coins < bet) {
-        return message.reply(`❌ You don't have enough coins. Your balance: ${userData.coins}`);
+        return message.reply(`❌ You don't have enough coins to bet ${bet}. Your balance: ${userData.coins}`);
       }
 
       const symbols = ["🍒", "🍋", "🔔", "🍇", "💎"];
