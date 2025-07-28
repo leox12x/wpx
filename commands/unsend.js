@@ -1,12 +1,12 @@
 module.exports = {
   config: {
-    name: "r",
-    aliases: ["uns", "unsend", "unsent", "u"],
-    version: "1.2",
+    name: "unsend",
+    aliases: ["uns", "r", "unsent", "u"],
+    version: "1.5",
     author: "NTKhang",
     countDown: 5,
     role: 0,
-    category: "box chat",
+    category: "group",
     description: {
       en: "Unsend bot's message"
     },
