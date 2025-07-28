@@ -59,7 +59,7 @@ module.exports = {
       const bar = '░'.repeat(10).split('').fill('█', 0, filled).join('');
 
       const isOwn = targetUserId === contact.id._serialized;
-      const displayName = isOwn ? "🎀 𝐁𝐚𝐛𝐲, 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐤" : `🎀 ${targetName}, 𝐫𝐚𝐧𝐤`;
+      const displayName = isOwn ? ">🎀 𝐁𝐚𝐛𝐲, 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐤" : `>🎀 ${targetName}, 𝐫𝐚𝐧𝐤`;
 
       const msg = `
 > ${displayName}
