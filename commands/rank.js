@@ -1,14 +1,12 @@
-// File: rank.js
-// Author: tas33n | Fixed by Rahaman Leon
 
 const { getUserData, log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
     name: "rank",
-    aliases: ["level", "xp"],
-    version: "1.2",
-    author: "tas33n | Rahaman Leon",
+    aliases: ["level"],
+    version: "1.7",
+    author: "MahMUD",
     coolDown: 3,
     role: 0,
     description: "Check your current rank and XP",
@@ -22,7 +20,7 @@ module.exports = {
     try {
       const User = require('../models/User');
 
-      if (args[0] && args[0].toLowerCase() === 'top') {
+      if (args[0]?.toLowerCase() === 'top') {
         return await this.showLeaderboard(message, client);
       }
 
@@ -40,7 +38,7 @@ module.exports = {
         }
       } else {
         const mentions = await message.getMentions();
-        if (mentions && mentions.length > 0) {
+        if (mentions.length > 0) {
           targetUserId = mentions[0].id._serialized;
           targetName = mentions[0].name || mentions[0].pushname || targetUserId.split('@')[0];
         }
@@ -54,30 +52,25 @@ module.exports = {
       const xpForNext = this.getXPForLevel(targetUser.level + 1);
       const progress = Math.max(0, targetUser.exp - xpForCurrent);
       const needed = Math.max(0, xpForNext - targetUser.exp);
+      const totalGap = xpForNext - xpForCurrent || 1;
 
-      const percent = Math.max(0, Math.min(progress / (xpForNext - xpForCurrent), 1));
+      const percent = Math.max(0, Math.min(progress / totalGap, 1));
       const filled = Math.floor(percent * 10);
-      const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
-
-      const lastActiveAgo = targetUser.lastActive ? this.formatTimeAgo(Date.now() - targetUser.lastActive) : 'Unknown';
+      const bar = '░'.repeat(10).split('').fill('█', 0, filled).join('');
 
       const isOwn = targetUserId === contact.id._serialized;
-      const title = isOwn ? "🏆 Your Rank Info" : `🏆 ${targetName}'s Rank Info`;
+      const displayName = isOwn ? "🎀 𝐁𝐚𝐛𝐲, 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐤" : `🎀 ${targetName}, 𝐫𝐚𝐧𝐤`;
 
       const msg = `
-${title}
+> ${displayName}
 ━━━━━━━━━━━━━━━━━━━━━
-🔸 Rank: #${rank} of ${allUsers.length}
-🔸 Level: ${targetUser.level}
-🔸 XP: ${targetUser.exp.toLocaleString()}
-🔸 Messages: ${targetUser.messageCount?.toLocaleString() || 0}
-🔸 Coins: ${targetUser.coins?.toLocaleString() || 0}
-🔸 Last Active: ${lastActiveAgo}
+• 𝐑𝐚𝐧𝐤: #${rank} of ${allUsers.length}
+• 𝐋𝐞𝐯𝐞𝐥: ${targetUser.level}
+• 𝐄𝐱𝐩: ${targetUser.exp.toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━
-📊 Progress to Level ${targetUser.level + 1}:
+📊 𝐏𝐫𝐨𝐠𝐫𝐞𝐬𝐬 𝐭𝐨 𝐋𝐞𝐯𝐞𝐥: ${targetUser.level + 1}
 ${bar} ${Math.round(percent * 100)}%
-⚡ XP Needed: ${needed.toLocaleString()} XP
-💡 Tip: Send messages to gain XP and climb ranks!
+⚡ 𝐄𝐱𝐩 𝐍𝐞𝐞𝐝𝐞𝐝: ${needed.toLocaleString()} 𝐄𝐱𝐩
       `.trim();
 
       await message.reply(msg);
