@@ -3,7 +3,7 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
-    name: "daily2",
+    name: "daily",
     aliases: ["dailyreward", "checkin"],
     version: "1.5",
     author: "RL + Fixed by Mahmud",
