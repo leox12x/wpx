@@ -20,10 +20,10 @@ module.exports = {
       // Fetch all users with either money or exp > 0
       let users;
       if (type === "exp") {
-        users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(20);
+        users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(15);
         if (!users.length) return message.reply("No users with EXP to display.");
       } else {
-        users = await User.find({ money: { $gt: 0 } }).sort({ money: -1 }).limit(20);
+        users = await User.find({ money: { $gt: 0 } }).sort({ money: -1 }).limit(15);
         if (!users.length) return message.reply("No users with money to display.");
       }
 
@@ -40,8 +40,8 @@ module.exports = {
       });
 
       const title = type === "exp"
-        ? "👑 TOP 20 EXP USERS:"
-        : "👑 | 𝐓𝐨𝐩 𝟐𝟎 𝐑𝐢𝐜𝐡𝐞𝐬𝐭 𝐔𝐬𝐞𝐫𝐬:";
+        ? "👑 TOP 15 EXP USERS:"
+        : "👑 | 𝐓𝐨𝐩 15 𝐑𝐢𝐜𝐡𝐞𝐬𝐭 𝐔𝐬𝐞𝐫𝐬:";
 
       return message.reply(`${title}\n\n${topList.join("\n")}`);
 
