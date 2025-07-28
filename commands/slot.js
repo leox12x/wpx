@@ -11,14 +11,14 @@ function getSenderId(message) {
 module.exports = {
   config: {
     name: "slot",
-    version: "1.4",
+    version: "1.6",
     author: "Mahmud",
     countDown: 5,
     role: 0,
-    description: "Play slot machine to win or lose coins by betting an amount.",
+    description: "Play slot machine to win or lose coins.",
     category: "economy",
     guide: {
-      en: "Usage: !slot <betAmount> (e.g., !slot 100)"
+      en: "Usage: !slot <amount>"
     }
   },
 
@@ -26,9 +26,9 @@ module.exports = {
     const senderID = getSenderId(message);
     if (!senderID) return message.reply("❌ Cannot determine your ID.");
 
-    const bet = args.length ? parseInt(args[0]) : null;
-    if (!bet || isNaN(bet) || bet <= 0) {
-      return message.reply("❌ Please enter a valid positive bet amount. Example: !slot 100");
+    const bet = parseInt(args[0]);
+    if (isNaN(bet) || bet <= 0) {
+      return message.reply("❌ Please enter a valid bet amount.\nExample: !slot 100");
     }
 
     try {
@@ -36,10 +36,10 @@ module.exports = {
       if (!userData) return message.reply("❌ User data not found.");
 
       if (userData.coins < bet) {
-        return message.reply(`❌ You don't have enough coins to bet ${bet}. Your balance: ${userData.coins}`);
+        return message.reply(`❌ You don't have enough coins.\nBalance: ${userData.coins}`);
       }
 
-      const symbols = ["🍒", "🍋", "🔔", "🍇", "💎"];
+      const symbols = ["❤", "💜", "💙", "💚", "💛", "🖤", "🤍", "🤎"];
       const result = [
         symbols[Math.floor(Math.random() * symbols.length)],
         symbols[Math.floor(Math.random() * symbols.length)],
@@ -55,18 +55,14 @@ module.exports = {
         reward = -bet;
       }
 
-      const newCoins = userData.coins + reward;
-      await updateUserData(senderID, { coins: newCoins });
+      const updatedCoins = userData.coins + reward;
+      await updateUserData(senderID, { coins: updatedCoins });
 
-      const slotResult = result.join(" | ");
-      const winLoseMessage = reward > 0
-        ? `🎉 You won ${reward} coins!`
-        : `😢 You lost ${-reward} coins.`;
-
-      return message.reply(`🎰 ${slotResult}\n${winLoseMessage}\n💰 Balance: ${newCoins}`);
-    } catch (error) {
-      console.error("Slot error:", error);
-      return message.reply("❌ An error occurred while playing slot.");
+      const display = `>🎀\n• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 ${reward > 0 ? "𝐰𝐨𝐧" : "𝐥𝐨𝐬𝐭"} $${Math.abs(reward)}\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${result.join(" | ")} ]`;
+      return message.reply(display);
+    } catch (err) {
+      console.error("Slot error:", err);
+      return message.reply("❌ Something went wrong.");
     }
   }
 };
