@@ -65,7 +65,7 @@ module.exports = {
       coins: (user.coins || 0) + getCoin,
       exp: (user.exp || 0) + getExp,
       level: this.calculateLevel((user.exp || 0) + getExp),
-      lastDailyReward: today,
+      lastDailyReward: today, // ✅ Stored as string now
       lastActive: Date.now()
     };
 
