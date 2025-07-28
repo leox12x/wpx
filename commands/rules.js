@@ -10,7 +10,7 @@ module.exports = {
     countDown: 5,
     role: 0,
     description: "Create/view/add/edit/move/delete group rules",
-    category: "box chat",
+    category: "group",
     guide: "   {pn} [add | -a] <rule>: add a rule\n"
       + "   {pn}: view all rules\n"
       + "   {pn} [edit | -e] <n> <new content>: edit rule n\n"
