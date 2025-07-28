@@ -20,9 +20,9 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, reply }) {
+  onStart: async function ({ message }) {
     const senderID = getSenderId(message);
-    if (!senderID) return reply("❌ Cannot determine your ID.");
+    if (!senderID) return message.reply("❌ Cannot determine your ID.");
 
     try {
       const userData = await getUserData(senderID);
@@ -47,17 +47,15 @@ module.exports = {
       await updateUserData(senderID, { coins: newBalance });
 
       let msg = `🎰 ${result.join(" | ")} 🎰\n`;
-      if (reward > 0) {
-        msg += `\n🎉 You won ${reward} coins!`;
-      } else {
-        msg += `\n😢 You lost ${Math.abs(reward)} coins.`;
-      }
-
+      msg += reward > 0
+        ? `\n🎉 You won ${reward} coins!`
+        : `\n😢 You lost ${Math.abs(reward)} coins.`;
       msg += `\n💰 Balance: ${newBalance} coins`;
-      return reply(msg);
+
+      return message.reply(msg);
     } catch (err) {
       console.error("Slot error:", err);
-      return reply("❌ An error occurred while playing slot.");
+      return message.reply("❌ An error occurred while playing slot.");
     }
   }
 };
