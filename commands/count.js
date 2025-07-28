@@ -37,33 +37,38 @@ module.exports = {
     try {
       const chat = await message.getChat();
       const contact = await message.getContact();
-      const threadID = chat.id._serialized;
-      const userID = contact.id._serialized;
+
+      if (!chat || !contact) return message.reply("❌ Unable to identify chat or contact.");
+
+      const threadID = chat.id?._serialized;
+      const userID = contact.id?._serialized;
       const userName = contact.pushname || "Unknown";
+
+      if (!threadID || !userID) return message.reply("❌ Missing user or group ID.");
 
       if (args[0]?.toLowerCase() === "all") {
         const allUsers = await MessageCount.find({ threadID }).sort({ count: -1 }).limit(50);
         if (!allUsers.length)
-          return await message.reply("❌ No message data found for this group.");
+          return message.reply("❌ No message data found for this group.");
 
         let msg = "📊 Group Message Leaderboard:\n";
-        let index = 1;
-        for (const user of allUsers) {
-          const rank = index === 1 ? "🥇" : index === 2 ? "🥈" : index === 3 ? "🥉" : `${index}.`;
+        allUsers.forEach((user, i) => {
+          const rank = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
           msg += `\n${rank} ${user.name}: ${user.count} msg`;
-          index++;
-        }
-        return await message.reply(msg);
+        });
+
+        return message.reply(msg);
       }
 
       const userData = await MessageCount.findOne({ threadID, userID });
-      if (!userData)
-        return await message.reply("❌ No message data found for you.");
 
-      return await message.reply(`✅ ${userName}, you have sent ${userData.count} messages in this group.`);
+      if (!userData)
+        return message.reply("❌ No message data found for you.");
+
+      return message.reply(`✅ ${userName}, you have sent ${userData.count} messages in this group.`);
     } catch (err) {
       console.error("❌ count command error:", err);
-      return await message.reply("❌ An error occurred: " + err.message);
+      return message.reply("❌ An error occurred while fetching count.");
     }
   },
 
@@ -71,8 +76,11 @@ module.exports = {
     try {
       const chat = await message.getChat();
       const contact = await message.getContact();
-      const threadID = chat.id._serialized;
-      const userID = contact.id._serialized;
+
+      if (!chat || !contact) return;
+
+      const threadID = chat.id?._serialized;
+      const userID = contact.id?._serialized;
       const userName = contact.pushname || "Unknown";
 
       if (!threadID || !userID) return;
@@ -88,7 +96,8 @@ module.exports = {
         });
       } else {
         existing.count += 1;
-        existing.name = userName || existing.name;
+        if (userName && userName !== existing.name)
+          existing.name = userName;
         await existing.save();
       }
     } catch (err) {
