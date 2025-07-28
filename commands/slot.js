@@ -11,9 +11,9 @@ function getSenderId(message) {
 module.exports = {
   config: {
     name: "slot",
-    version: "1.6",
-    author: "Mahmud",
-    countDown: 5,
+    version: "1.7",
+    author: "MahMUD",
+    countDown: 10,
     role: 0,
     description: "Play slot machine to win or lose coins.",
     category: "economy",
