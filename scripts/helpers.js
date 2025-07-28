@@ -24,7 +24,6 @@ function log(message, type = 'info') {
     warning: chalk.yellow,
     error: chalk.red
   };
-
   const coloredMessage = colors[type] ? colors[type](message) : message;
   console.log(`[${timestamp}] ${coloredMessage}`);
 }
@@ -42,13 +41,12 @@ function formatUptime(ms) {
   return `${seconds}s`;
 }
 
-// Initialize database (not needed for MongoDB, but placeholder)
+// Initialize database (placeholder)
 async function initDatabase() {
   log('✅ MongoDB mode, no JSON database to initialize.', 'info');
 }
 
-// Get user data
-async function getUserData(userId) {
+// ✅ Get user data (FIXED)
 async function getUserData(userId, name = null) {
   let user = await User.findOne({ id: userId });
   if (!user) {
@@ -70,12 +68,11 @@ async function getUserData(userId, name = null) {
 
 // Update user data
 async function updateUserData(userId, updates) {
-  let user = await User.findOneAndUpdate(
+  return await User.findOneAndUpdate(
     { id: userId },
     { $set: updates },
     { new: true, upsert: true }
   );
-  return user;
 }
 
 // Get group data
@@ -99,12 +96,11 @@ async function getGroupData(groupId) {
 
 // Update group data
 async function updateGroupData(groupId, updates) {
-  let group = await Group.findOneAndUpdate(
+  return await Group.findOneAndUpdate(
     { id: groupId },
     { $set: updates },
     { new: true, upsert: true }
   );
-  return group;
 }
 
 // OpenAI integration
@@ -173,6 +169,7 @@ async function trackCommand(userId) {
   }
 }
 
+// ✅ Export functions
 module.exports = {
   log,
   formatUptime,
