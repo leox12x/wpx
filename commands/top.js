@@ -22,7 +22,7 @@ module.exports = {
         users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(15);
         if (!users.length) return message.reply("No users with EXP to display.");
       } else {
-        users = await User.find({ money: { $gt: 0 } }).sort({ money: -1 }).limit(15);
+        users = await User.find({ coins: { $gt: 0 } }).sort({ coins: -1 }).limit(15);
         if (!users.length) return message.reply("No users with money to display.");
       }
 
@@ -38,7 +38,7 @@ module.exports = {
 
         return type === "exp"
           ? `${rank} ${name}: ${formatNumber(user.exp)} EXP`
-          : `${rank} ${name}: ${formatNumber(user.money)}$`;
+          : `${rank} ${name}: ${formatNumber(user.coins)}$`;
       }));
 
       const title = type === "exp"
