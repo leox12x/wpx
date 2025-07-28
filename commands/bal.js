@@ -1,18 +1,17 @@
-// balance.js
 const { getUserData } = require("../scripts/helpers");
 
 module.exports = {
   config: {
     name: "balance",
     aliases: ["bal", "wallet", "money", "cash"],
-    version: "1.3",
-    author: "Rahaman Leon",
+    version: "1.4",
+    author: "RL",
     countDown: 5,
     role: 0,
-    description: "Check your balance or the mentioned user's balance.",
+    description: "Check your balance or a mentioned user's.",
     category: "economy",
     guide: {
-      en: "{prefix}balance - Check your own money\n{prefix}balance @mention - Check mentioned user's money"
+      en: "{prefix}bal or {prefix}bal @mention"
     }
   },
 
@@ -24,35 +23,28 @@ module.exports = {
   },
 
   onStart: async function ({ message, getLang, client }) {
-    try {
-      const mentions = message.mentionedIds || [];
+    const mentionIds = message.mentionedIds || [];
 
-      if (mentions.length > 0) {
-        const replyLines = await Promise.all(
-          mentions.map(async (uid) => {
-            try {
-              const userData = await getUserData(uid);
-              const contact = await client.getContactById(uid).catch(() => null);
-              const name = contact?.pushname || contact?.name || uid.replace('@c.us', '');
-              const money = userData?.coins || 0;
-              return getLang("moneyOf").replace("%1", name).replace("%2", money);
-            } catch (error) {
-              return `❌ Could not retrieve balance for ${uid}`;
-            }
-          })
-        );
+    if (mentionIds.length) {
+      const results = await Promise.all(mentionIds.map(async id => {
+        const data = await getUserData(id);
+        const coins = data?.coins || 0;
+        let name = id.split("@")[0];
 
-        return message.reply(replyLines.join("\n"));
-      }
+        try {
+          const c = await client.getContactById(id);
+          name = c.name || c.pushname || name;
+        } catch {}
 
-      const senderId = message.author || message.from;
-      const userData = await getUserData(senderId);
-      const money = userData?.coins || 0;
+        return getLang("moneyOf").replace("%1", name).replace("%2", coins);
+      }));
 
-      return message.reply(getLang("money").replace("%1", money));
-    } catch (error) {
-      console.error("Error in balance command:", error);
-      return message.reply("❌ Error retrieving balance.");
+      return message.reply(results.join("\n"));
     }
+
+    const uid = message.author;
+    const data = await getUserData(uid);
+    const coins = data?.coins || 0;
+    return message.reply(getLang("money").replace("%1", coins));
   }
 };
