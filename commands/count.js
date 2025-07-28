@@ -20,8 +20,8 @@ const MessageCount = mongoose.models.MessageCount || mongoose.model("MessageCoun
 module.exports = {
   config: {
     name: "count",
-    aliases: ["msgcount", "messages"],
-    version: "1.2",
+    aliases: ["msgcount", "messages", "c"],
+    version: "1.7",
     author: "MahMUD",
     countDown: 5,
     role: 0,
