@@ -17,31 +17,29 @@ module.exports = {
     try {
       const type = (args[0] || "bal").toLowerCase();
 
-      // Fetch users based on type
       let users;
       if (type === "exp") {
-        users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(10);
+        users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(15);
         if (!users.length) return message.reply("No users with EXP to display.");
       } else {
-        users = await User.find({ coins: { $gt: 0 } }).sort({ coins: -1 }).limit(10);
+        users = await User.find({ money: { $gt: 0 } }).sort({ money: -1 }).limit(15);
         if (!users.length) return message.reply("No users with money to display.");
       }
 
       const medals = ["🥇", "🥈", "🥉"];
 
-      const topList = users.map((user, i) => {
+      // Fetch names in parallel
+      const topList = await Promise.all(users.map(async (user, i) => {
         const rank = i < 3 ? medals[i] : `${i + 1}.`;
-        const name =
-          user.name ||
-          user.fullName ||
-          user.username ||
-          (user.id && user.id.split("@")[0]) ||
-          "Unknown";
+
+        const userID = user.userID || user.id || "Unknown";
+        const data = await getUserData(userID);
+        const name = data?.name || String(userID);
 
         return type === "exp"
           ? `${rank} ${name}: ${formatNumber(user.exp)} EXP`
-          : `${rank} ${name}: ${formatNumber(user.coins)}$`;
-      });
+          : `${rank} ${name}: ${formatNumber(user.money)}$`;
+      }));
 
       const title = type === "exp"
         ? "👑 TOP 15 EXP USERS:"
