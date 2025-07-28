@@ -1,5 +1,5 @@
 // balance.js
-// Author: Rahaman Leon
+// Author: Rahaman Leon (fixed by ChatGPT)
 
 module.exports = {
   config: {
@@ -18,32 +18,29 @@ module.exports = {
 
   langs: {
     en: {
-      money: "𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞 %1$",
-      moneyOf: "💰 %1 has %2$"
+      money: "𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞: %1",
+      moneyOf: "💰 %1 has %2"
     }
   },
 
   onStart: async function ({ message, usersData, getLang, client }) {
     try {
-      // Get mentions safely (whatsapp-web.js uses message.mentionedIds)
       const mentions = message.mentionedIds || [];
 
       if (mentions.length > 0) {
-        // Prepare reply for each mentioned user
+        // Reply with balances of all mentioned users
         const replyLines = await Promise.all(
           mentions.map(async (uid) => {
             try {
-              // Get display name from contact if possible
               const contact = await client.getContactById(uid).catch(() => null);
               const name = contact?.pushname || contact?.name || uid.replace('@c.us', '');
 
-              // Get user's money (default 0)
               const money = await usersData.get(uid, "money") || 0;
-
-              return getLang("moneyOf", name, money);
+              // Replace placeholders
+              return getLang("moneyOf").replace("%1", name).replace("%2", money);
             } catch (error) {
               console.error(`Error getting balance for ${uid}:`, error);
-              return `❌ Could not retrieve balance for user`;
+              return `❌ Could not retrieve balance for user ${uid}`;
             }
           })
         );
@@ -55,7 +52,7 @@ module.exports = {
       const senderId = message.author || message.from;
       const userMoney = await usersData.get(senderId, "money") || 0;
 
-      return message.reply(getLang("money", userMoney));
+      return message.reply(getLang("money").replace("%1", userMoney));
     } catch (error) {
       console.error("Error in balance command:", error);
       return message.reply("❌ Error retrieving balance. Please try again later.");
