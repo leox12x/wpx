@@ -47,12 +47,13 @@ async function initDatabase() {
 }
 
 // ✅ Get user data with proper name handling
-async function getUserData(userId, name = null) {
+async function getUserData(userId, userName = null) {
   let user = await User.findOne({ id: userId });
+
   if (!user) {
     user = new User({
       id: userId,
-      name: name || "", // ✅ fallback to blank string
+      name: userName || "",
       coins: 0,
       exp: 0,
       level: 1,
@@ -62,10 +63,11 @@ async function getUserData(userId, name = null) {
       joinDate: Date.now()
     });
     await user.save();
-  } else if (name && name !== user.name) {
-    user.name = name;
+  } else if (userName && user.name !== userName) {
+    user.name = userName;
     await user.save();
   }
+
   return user;
 }
 
@@ -154,9 +156,9 @@ async function downloadMedia(message) {
 }
 
 // ✅ Track command and update name if needed
-async function trackCommand(userId, name = null) {
+async function trackCommand(userId, userName = null) {
   try {
-    const userData = await getUserData(userId, name);
+    const userData = await getUserData(userId, userName);
     await updateUserData(userId, {
       commandCount: (userData.commandCount || 0) + 1,
       lastActive: Date.now()
