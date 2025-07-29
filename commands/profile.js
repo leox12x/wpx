@@ -66,7 +66,7 @@ async function getProfileMedia(url, name) {
     const res = await axios.get(url, { responseType: 'arraybuffer' });
     const buffer = Buffer.from(res.data);
     const media = new MessageMedia('image/jpeg', buffer.toString('base64'), 'profile.jpg');
-    const caption = `📸 *${name}'s Profile Picture*\n📊 Size: ${(buffer.length / 1024).toFixed(1)} KB`;
+    const caption = `>🎀 *${name}'\n𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐩𝐫𝐨𝐟𝐢𝐥𝐞 <😘`;
     return { media, caption };
 }
 
