@@ -6,7 +6,7 @@ const config = require('../config.json');
 const User = require('../models/User');
 const Group = require('../models/Group');
 
-// Connect to MongoDB
+// MongoDB connection
 if (!mongoose.connection.readyState) {
   mongoose.connect(config.database.uri, {
     useNewUrlParser: true,
@@ -24,7 +24,6 @@ function log(message, type = 'info') {
     warning: chalk.yellow,
     error: chalk.red
   };
-
   const coloredMessage = colors[type] ? colors[type](message) : message;
   console.log(`[${timestamp}] ${coloredMessage}`);
 }
@@ -42,18 +41,18 @@ function formatUptime(ms) {
   return `${seconds}s`;
 }
 
-// Initialize database
+// Initialize database (for JSON fallback)
 async function initDatabase() {
   log('✅ MongoDB mode, no JSON database to initialize.', 'info');
 }
 
-// ✅ Get user data with name support
+// ✅ Get user data with proper name handling
 async function getUserData(userId, name = null) {
   let user = await User.findOne({ id: userId });
   if (!user) {
     user = new User({
       id: userId,
-      name: name || userId,
+      name: name || "", // ✅ fallback to blank string
       coins: 0,
       exp: 0,
       level: 1,
@@ -63,7 +62,7 @@ async function getUserData(userId, name = null) {
       joinDate: Date.now()
     });
     await user.save();
-  } else if (name && user.name !== name) {
+  } else if (name && name !== user.name) {
     user.name = name;
     await user.save();
   }
@@ -72,12 +71,11 @@ async function getUserData(userId, name = null) {
 
 // Update user data
 async function updateUserData(userId, updates) {
-  let user = await User.findOneAndUpdate(
+  return await User.findOneAndUpdate(
     { id: userId },
     { $set: updates },
     { new: true, upsert: true }
   );
-  return user;
 }
 
 // Get group data
@@ -101,12 +99,11 @@ async function getGroupData(groupId) {
 
 // Update group data
 async function updateGroupData(groupId, updates) {
-  let group = await Group.findOneAndUpdate(
+  return await Group.findOneAndUpdate(
     { id: groupId },
     { $set: updates },
     { new: true, upsert: true }
   );
-  return group;
 }
 
 // OpenAI integration
@@ -121,14 +118,8 @@ async function callOpenAI(prompt, userId = null) {
       {
         model: config.ai.openai.model || 'gpt-3.5-turbo',
         messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant in a WhatsApp bot. Keep responses concise and friendly.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
+          { role: 'system', content: 'You are a helpful assistant in a WhatsApp bot.' },
+          { role: 'user', content: prompt }
         ],
         max_tokens: 500,
         temperature: 0.7
@@ -148,7 +139,7 @@ async function callOpenAI(prompt, userId = null) {
   }
 }
 
-// Download media (placeholder)
+// Media downloader
 async function downloadMedia(message) {
   try {
     if (message.hasMedia) {
@@ -162,7 +153,7 @@ async function downloadMedia(message) {
   }
 }
 
-// ✅ Track command usage and update name if provided
+// ✅ Track command and update name if needed
 async function trackCommand(userId, name = null) {
   try {
     const userData = await getUserData(userId, name);
