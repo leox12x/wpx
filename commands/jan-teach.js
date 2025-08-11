@@ -73,6 +73,6 @@ module.exports.onStart = async function ({ message, args, usersData }) {
 
   } catch (error) {
     const errorMsg = error.response?.data || error.message || "Unknown error";
-    return message.reply(`❌ Error: ${errorMsg}`);
+    return message.reply(`${errorMsg}`);
   }
 };
