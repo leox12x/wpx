@@ -5,11 +5,21 @@ const mahmud = async () => {
   return base.data.mahmud;
 };
 
+function formatNumber(num) {
+  const units = ["", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "N", "D"];
+  let unit = 0;
+  while (num >= 1000 && unit < units.length - 1) {
+    num /= 1000;
+    unit++;
+  }
+  return Number(num.toFixed(1)) + units[unit];
+}
+
 module.exports = {
   config: {
     name: "quiz",
     aliases: ["qz"],
-    version: "1.9",
+    version: "2.0",
     author: "MahMUD",
     countDown: 10,
     role: 0,
@@ -33,20 +43,27 @@ module.exports = {
       const { question, correctAnswer, options } = quiz;
       const { a, b, c, d } = options;
 
-      const quizText = `\n╭──✦ ${question}\n├‣ 𝗔) ${a}\n├‣ 𝗕) ${b}\n├‣ 𝗖) ${c}\n├‣ 𝗗) ${d}\n╰──────────────────‣\n𝐑𝐞𝐩𝐥𝐲 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐚𝐧𝐬𝐰𝐞𝐫.`;
+      const quizText =
+        `\n╭──✦ ${question}` +
+        `\n├‣ 𝗔) ${a}` +
+        `\n├‣ 𝗕) ${b}` +
+        `\n├‣ 𝗖) ${c}` +
+        `\n├‣ 𝗗) ${d}` +
+        `\n╰──────────────────‣` +
+        `\n𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐭𝐡𝐢𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐚𝐧𝐬𝐰𝐞𝐫.`;
 
-      // Send quiz and store reply session
       const sent = await message.reply(quizText);
 
+      // Store reply session — store the quiz message ID so replies can be matched
       global.GoatBot.onReply.set(sent.key.id, {
-        type: "quiz-reply",
+        type: "quiz",
         commandName: this.config.name,
         author: message.author,
-        messageID: sent.key.id,
+        quizMessageID: sent.key.id, // store for lookup
         correctAnswer
       });
 
-      // Auto delete quiz after 40 seconds
+      // Auto delete after 40s
       setTimeout(() => {
         message.delete(sent.key.id).catch(() => {});
       }, 40000);
@@ -59,11 +76,13 @@ module.exports = {
 
   onReply: async function ({ message, Reply, usersData }) {
     const { correctAnswer, author } = Reply;
+
+    // Check if reply belongs to the original author
     if (message.author !== author) {
       return message.reply("𝐓𝐡𝐢𝐬 𝐢𝐬 𝐧𝐨𝐭 𝐲𝐨𝐮𝐫 𝐪𝐮𝐢𝐳 𝐛𝐚𝐛𝐲 >🐸");
     }
 
-    await message.delete(Reply.messageID).catch(() => {});
+    await message.delete(Reply.quizMessageID).catch(() => {});
     const userReply = message.body.trim().toLowerCase();
 
     if (userReply === correctAnswer.toLowerCase()) {
@@ -77,7 +96,7 @@ module.exports = {
         data: userData.data
       });
 
-      message.reply(`✅ | Correct answer baby\nYou earned ${rewardCoins} coins & ${rewardExp} exp.`);
+      message.reply(`✅ | Correct answer baby\nYou earned ${formatNumber(rewardCoins)} coins & ${rewardExp} exp.`);
     } else {
       message.reply(`❌ | Wrong answer baby\nThe correct answer was: ${correctAnswer}`);
     }
