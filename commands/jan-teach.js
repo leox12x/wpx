@@ -24,9 +24,9 @@ module.exports.config = {
 
 module.exports.onStart = async function ({ message, args, usersData }) {
   try {
-    // Extract pure phone number from full jid
+    // Extract phone number from full jid
     const fullJid = message.author || "";
-    const uid = fullJid.split("@")[0]; // Get phone number only
+    const uid = fullJid.split("@")[0]; // number only
 
     const userMessage = args.join(" ").toLowerCase();
 
@@ -60,14 +60,16 @@ module.exports.onStart = async function ({ message, args, usersData }) {
         userID: uid,
       });
 
-      const userName = (await usersData.getName(message.author)) || "Unknown User";
+      // Try getting user info, fallback to uid
+      const userInfo = await usersData.get(message.author);
+      const userName = (userInfo && userInfo.name) ? userInfo.name : uid;
 
       return message.reply(
         `✅ Replies added: "${responses}" to "${trigger}"\n• 𝐓𝐞𝐚𝐜𝐡𝐞𝐫: ${userName}\n• 𝐓𝐨𝐭𝐚𝐥: ${response.data.count || 0}`
       );
     }
 
-    // Add other message handling if needed
+    // You can add more commands or default replies here if needed
 
   } catch (err) {
     console.error("Error in jan command:", err);
