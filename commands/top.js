@@ -1,5 +1,5 @@
-const { getUserData, log } = require('../scripts/helpers');
 const User = require('../models/User');
+const { log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
@@ -28,13 +28,19 @@ module.exports = {
 
       const medals = ["🥇", "🥈", "🥉"];
 
-      // Fetch names in parallel
+      // Get names from WhatsApp contacts using client.getContact()
       const topList = await Promise.all(users.map(async (user, i) => {
         const rank = i < 3 ? medals[i] : `${i + 1}.`;
-
         const userID = user.userID || user.id || "Unknown";
-        const data = await getUserData(userID);
-        const name = data?.name || String(userID);
+
+        let name = userID;
+        try {
+          const contact = await client.getContact(userID);
+          name = contact?.pushname || contact?.name || userID;
+        } catch {
+          // fallback to userID if contact not found
+          name = userID;
+        }
 
         return type === "exp"
           ? `${rank} ${name}: ${formatNumber(user.exp)} EXP`
