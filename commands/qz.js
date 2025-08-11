@@ -19,7 +19,7 @@ module.exports = {
   config: {
     name: "quiz",
     aliases: ["qz"],
-    version: "2.0",
+    version: "2.1",
     author: "MahMUD",
     countDown: 10,
     role: 0,
@@ -50,20 +50,20 @@ module.exports = {
         `\n├‣ 𝗖) ${c}` +
         `\n├‣ 𝗗) ${d}` +
         `\n╰──────────────────‣` +
-        `\n𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐭𝐡𝐢𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐚𝐧𝐬𝐰𝐞𝐫.`;
+        `\nReply to this message with your answer.`;
 
       const sent = await message.reply(quizText);
 
-      // Store reply session — store the quiz message ID so replies can be matched
+      // IMPORTANT: store key as sent.key.id for WP Bot reply matching
       global.GoatBot.onReply.set(sent.key.id, {
         type: "quiz",
         commandName: this.config.name,
         author: message.author,
-        quizMessageID: sent.key.id, // store for lookup
+        quizMessageID: sent.key.id,
         correctAnswer
       });
 
-      // Auto delete after 40s
+      // Auto delete quiz after 40 seconds
       setTimeout(() => {
         message.delete(sent.key.id).catch(() => {});
       }, 40000);
@@ -77,12 +77,13 @@ module.exports = {
   onReply: async function ({ message, Reply, usersData }) {
     const { correctAnswer, author } = Reply;
 
-    // Check if reply belongs to the original author
+    // Ensure the reply is from the original quiz sender
     if (message.author !== author) {
-      return message.reply("𝐓𝐡𝐢𝐬 𝐢𝐬 𝐧𝐨𝐭 𝐲𝐨𝐮𝐫 𝐪𝐮𝐢𝐳 𝐛𝐚𝐛𝐲 >🐸");
+      return message.reply("This is not your quiz baby >🐸");
     }
 
-    await message.delete(Reply.quizMessageID).catch(() => {});
+    // Remove the quiz question message
+    message.delete(Reply.quizMessageID).catch(() => {});
     const userReply = message.body.trim().toLowerCase();
 
     if (userReply === correctAnswer.toLowerCase()) {
@@ -96,9 +97,9 @@ module.exports = {
         data: userData.data
       });
 
-      message.reply(`✅ | Correct answer baby\nYou earned ${formatNumber(rewardCoins)} coins & ${rewardExp} exp.`);
+      message.reply(`✅ Correct!\nYou earned ${formatNumber(rewardCoins)} coins & ${rewardExp} exp.`);
     } else {
-      message.reply(`❌ | Wrong answer baby\nThe correct answer was: ${correctAnswer}`);
+      message.reply(`❌ Wrong!\nThe correct answer was: ${correctAnswer}`);
     }
   }
 };
