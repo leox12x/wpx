@@ -71,8 +71,7 @@ module.exports = {
 
       const display = `>🎀
 • 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 ${reward > 0 ? "𝐰𝐨𝐧" : "𝐥𝐨𝐬𝐭"} ${formatNumber(Math.abs(reward))}$
-• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${result.join(" | ")} ]
-• 𝐍𝐞𝐰 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: ${formatNumber(updatedCoins)}$`;
+• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${result.join(" | ")} ]`;
 
       return message.reply(display);
     } catch (err) {
