@@ -8,10 +8,21 @@ function getSenderId(message) {
   return message.from || null;
 }
 
+// Format number into compact units
+function formatNumber(num) {
+  const units = ["", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "N", "D"];
+  let unit = 0;
+  while (num >= 1000 && unit < units.length - 1) {
+    num /= 1000;
+    unit++;
+  }
+  return Number(num.toFixed(1)) + units[unit];
+}
+
 module.exports = {
   config: {
     name: "slot",
-    version: "1.7",
+    version: "1.8",
     author: "MahMUD",
     countDown: 10,
     role: 0,
@@ -36,7 +47,7 @@ module.exports = {
       if (!userData) return message.reply("❌ User data not found.");
 
       if (userData.coins < bet) {
-        return message.reply(`❌ You don't have enough coins.\nBalance: ${userData.coins}`);
+        return message.reply(`❌ You don't have enough coins.\nBalance: ${formatNumber(userData.coins)}$`);
       }
 
       const symbols = ["❤", "💜", "💙", "💚", "💛", "🖤", "🤍", "🤎"];
@@ -58,7 +69,11 @@ module.exports = {
       const updatedCoins = userData.coins + reward;
       await updateUserData(senderID, { coins: updatedCoins });
 
-      const display = `>🎀\n• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 ${reward > 0 ? "𝐰𝐨𝐧" : "𝐥𝐨𝐬𝐭"} $${Math.abs(reward)}\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${result.join(" | ")} ]`;
+      const display = `>🎀
+• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 ${reward > 0 ? "𝐰𝐨𝐧" : "𝐥𝐨𝐬𝐭"} ${formatNumber(Math.abs(reward))}$
+• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${result.join(" | ")} ]
+• 𝐍𝐞𝐰 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: ${formatNumber(updatedCoins)}$`;
+
       return message.reply(display);
     } catch (err) {
       console.error("Slot error:", err);
