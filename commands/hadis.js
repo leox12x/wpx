@@ -1,12 +1,8 @@
 const axios = require("axios");
 
 const mahmud = async () => {
-  try {
-    const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
-    return base.data.mahmud;
-  } catch (error) {
-    throw new Error("Failed to fetch base API URL");
-  }
+  const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
+  return base.data.mahmud;
 };
 
 module.exports = {
@@ -29,26 +25,17 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ api, event }) {
-    // Author check
-    const obfuscatedAuthor = String.fromCharCode(77, 97, 104, 77, 85, 68);
-    if (module.exports.config.author !== obfuscatedAuthor) {
-      return api.sendMessage("❌ You are not authorized to change the author name.", event.threadID, event.messageID);
-    }
-
+  onStart: async function ({ message }) {
     try {
       const base = await mahmud();
       const res = await axios.get(`${base}/api/hadis`);
       const hadis = res.data;
 
-      const replyMsg = `╭────────────◊\n` +
-                       `├‣ 📖 ${hadis.text}\n` +
-                       `╰────────────◊\n` +
-                       `- ${hadis.source} 🖤`;
-
-      api.sendMessage(replyMsg, event.threadID, event.messageID);
+      await message.reply(
+        `${hadis.text}\n\n- ${hadis.source} 🖤`
+      );
     } catch (err) {
-      api.sendMessage("🥹 Error fetching hadis, contact MahMUD", event.threadID, event.messageID);
+      await message.reply("🥹 Error fetching Hadis, contact MahMUD");
     }
   }
 };
