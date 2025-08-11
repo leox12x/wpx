@@ -5,21 +5,11 @@ const mahmud = async () => {
   return base.data.mahmud;
 };
 
-function formatNumber(num) {
-  const units = ["", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "N", "D"];
-  let unit = 0;
-  while (num >= 1000 && unit < units.length - 1) {
-    num /= 1000;
-    unit++;
-  }
-  return Number(num.toFixed(1)) + units[unit];
-}
-
 module.exports = {
   config: {
     name: "quiz",
     aliases: ["qz"],
-    version: "2.1",
+    version: "2.0",
     author: "MahMUD",
     countDown: 10,
     role: 0,
@@ -43,29 +33,22 @@ module.exports = {
       const { question, correctAnswer, options } = quiz;
       const { a, b, c, d } = options;
 
-      const quizText =
-        `\n╭──✦ ${question}` +
-        `\n├‣ 𝗔) ${a}` +
-        `\n├‣ 𝗕) ${b}` +
-        `\n├‣ 𝗖) ${c}` +
-        `\n├‣ 𝗗) ${d}` +
-        `\n╰──────────────────‣` +
-        `\nReply to this message with your answer.`;
+      const quizText = `\n╭──✦ ${question}\n├‣ 𝗔) ${a}\n├‣ 𝗕) ${b}\n├‣ 𝗖) ${c}\n├‣ 𝗗) ${d}\n╰──────────────────‣\nReply to this message with your answer.`;
 
-      const sent = await message.reply(quizText);
+      // Send quiz
+      const sentMsg = await message.reply(quizText);
 
-      // IMPORTANT: store key as sent.key.id for WP Bot reply matching
-      global.GoatBot.onReply.set(sent.key.id, {
-        type: "quiz",
+      // Store for onReply
+      global.GoatBot.onReply.set(sentMsg.key.id, {
         commandName: this.config.name,
         author: message.author,
-        quizMessageID: sent.key.id,
+        messageID: sentMsg.key.id,
         correctAnswer
       });
 
-      // Auto delete quiz after 40 seconds
+      // Auto delete after 40s
       setTimeout(() => {
-        message.delete(sent.key.id).catch(() => {});
+        message.delete(sentMsg.key.id).catch(() => {});
       }, 40000);
 
     } catch (error) {
@@ -75,18 +58,16 @@ module.exports = {
   },
 
   onReply: async function ({ message, Reply, usersData }) {
-    const { correctAnswer, author } = Reply;
+    const { correctAnswer, author, messageID } = Reply;
 
-    // Ensure the reply is from the original quiz sender
     if (message.author !== author) {
-      return message.reply("This is not your quiz baby >🐸");
+      return message.reply("❌ This is not your quiz baby 🐸");
     }
 
-    // Remove the quiz question message
-    message.delete(Reply.quizMessageID).catch(() => {});
-    const userReply = message.body.trim().toLowerCase();
+    await message.delete(messageID).catch(() => {});
+    const userAnswer = message.body.trim().toLowerCase();
 
-    if (userReply === correctAnswer.toLowerCase()) {
+    if (userAnswer === correctAnswer.toLowerCase()) {
       const rewardCoins = 500;
       const rewardExp = 121;
       const userData = await usersData.get(author);
@@ -97,9 +78,9 @@ module.exports = {
         data: userData.data
       });
 
-      message.reply(`✅ Correct!\nYou earned ${formatNumber(rewardCoins)} coins & ${rewardExp} exp.`);
+      message.reply(`✅ Correct answer!\nYou earned ${rewardCoins} coins & ${rewardExp} exp.`);
     } else {
-      message.reply(`❌ Wrong!\nThe correct answer was: ${correctAnswer}`);
+      message.reply(`❌ Wrong answer!\nThe correct answer was: ${correctAnswer}`);
     }
   }
 };
