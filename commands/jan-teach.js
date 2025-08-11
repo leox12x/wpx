@@ -69,10 +69,10 @@ module.exports.onStart = async function ({ message, args, usersData }) {
       );
     }
 
-    // You can add more commands or default replies here if needed
+    // Add more handling here if you want
 
-  } catch (err) {
-    console.error("Error in jan command:", err);
-    return message.reply("❌ An error occurred.");
+  } catch (error) {
+    const errorMsg = error.response?.data || error.message || "Unknown error";
+    return message.reply(`❌ Error: ${errorMsg}`);
   }
 };
