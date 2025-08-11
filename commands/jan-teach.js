@@ -24,8 +24,11 @@ module.exports.config = {
 
 module.exports.onStart = async function ({ message, args, usersData }) {
   try {
+    // Extract pure phone number from full jid
+    const fullJid = message.author || "";
+    const uid = fullJid.split("@")[0]; // Get phone number only
+
     const userMessage = args.join(" ").toLowerCase();
-    const uid = message.author;
 
     if (!args[0]) {
       const responses = [
@@ -57,14 +60,17 @@ module.exports.onStart = async function ({ message, args, usersData }) {
         userID: uid,
       });
 
-      const userName = (await usersData.getName(uid)) || "Unknown User";
+      const userName = (await usersData.getName(message.author)) || "Unknown User";
 
       return message.reply(
         `✅ Replies added: "${responses}" to "${trigger}"\n• 𝐓𝐞𝐚𝐜𝐡𝐞𝐫: ${userName}\n• 𝐓𝐨𝐭𝐚𝐥: ${response.data.count || 0}`
       );
     }
+
+    // Add other message handling if needed
+
   } catch (err) {
-    console.error(err);
+    console.error("Error in jan command:", err);
     return message.reply("❌ An error occurred.");
   }
 };
