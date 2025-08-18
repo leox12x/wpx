@@ -6,7 +6,7 @@
   },
   "bot": {
     "prefix": "!",
-    "name": "DORA Bot",
+    "name": "Hinata Bot",
     "defaultLang": "en",
     "timezone": "Asia/Dhaka",
     "enableWordTriggers": true,
@@ -14,6 +14,7 @@
   },
   "adminBot": [
     "8801723153138@c.us",
+    "8801966529233@c.us",
     "6073436114963@lid"
   ],
   "adminOnly": false,
