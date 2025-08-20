@@ -3,9 +3,9 @@ const { log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
-    name: "uid2",
+    name: "uid",
     version: "2.0",
-    author: "MahMUD | Fixed by Rahaman Leon",
+    author: "MahMUD",
     countDown: 5,
     role: 0,
     category: "general",
