@@ -1,7 +1,10 @@
+const User = require('../models/User');
+const { log } = require('../scripts/helpers');
+
 module.exports = {
   config: {
     name: "uid",
-    version: "1.2",
+    version: "2.0",
     author: "MahMUD",
     countDown: 5,
     role: 0,
@@ -11,29 +14,44 @@ module.exports = {
 
   onStart: async function ({ message, args }) {
     try {
-      let replyText = "";
+      let uids = [];
 
       // ✅ Case 1: Replying to someone's message
       if (message.hasQuotedMsg) {
         const quoted = await message.getQuotedMessage();
-        const uid = quoted.author || quoted.from;
-        return message.reply(`🔑 UID: ${uid}`);
+        const uid = (quoted.author || quoted.from).split('@')[0];
+        uids.push(uid);
       }
 
       // ✅ Case 2: Tagged users
-      if (args.length > 0 && message.mentionedIds.length > 0) {
+      else if (args.length > 0 && message.mentionedIds.length > 0) {
         message.mentionedIds.forEach(id => {
-          replyText += `👤 UID: ${id}\n`;
+          const uid = id.split('@')[0];
+          uids.push(uid);
         });
-        return message.reply(replyText.trim());
       }
 
       // ✅ Case 3: Default → own UID
-      return message.reply(`🔑 Your UID: ${message.from}`);
+      else {
+        const uid = message.from.split('@')[0];
+        uids.push(uid);
+      }
+
+      // Send UID(s) as reply
+      const replyText = uids.map((u, i) => `🔑 UID: ${u}`).join('\n');
+      await message.reply(replyText);
+
+      // Log UID(s)
+      uids.forEach(u => log(`UID fetched: ${u}`));
+
+      // Save to DB
+      for (const uid of uids) {
+        await User.create({ uid }).catch(err => log(`[DB Error] ${err.message}`));
+      }
 
     } catch (err) {
       console.error("[UID Command Error]", err.message);
-      return message.reply("❌ Failed to get WhatsApp UID.");
+      return message.reply("❌ Failed to get UID.");
     }
   }
 };
