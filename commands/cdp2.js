@@ -1,11 +1,12 @@
 const axios = require("axios");
 const { MessageMedia } = require("whatsapp-web.js");
+const Jimp = require("jimp");
 
 module.exports = {
   config: {
     name: "cdp2",
-    version: "1.7",
-    author: "MahMUD",
+    version: "2.1",
+    author: "MahMUD | Fixed by Rahaman Leon",
     countDown: 5,
     role: 0,
     category: "image",
@@ -14,47 +15,43 @@ module.exports = {
 
   onStart: async function ({ message, args }) {
     try {
-      // 📋 Show total list
+      // 📋 List option
       if (args[0] === "list") {
-        const res = await axios.get("https://mahmud-global-apis.onrender.com/api/cdp/list", { timeout: 5000 });
-        const { total } = res.data || {};
-        return message.reply(total ? `🎀 Total Couple DPs: ${total}` : "⚠ No data available.");
+        const res = await axios.get("https://mahmud-global-apis.onrender.com/api/cdp/list");
+        return message.reply(`🎀 Total Couple DPs: ${res.data.total}`);
       }
 
-      // 🎀 Fetch random couple dp
-      const res = await axios.get("https://mahmud-global-apis.onrender.com/api/cdp", { timeout: 7000 });
+      // 🎀 Fetch couple dp
+      const res = await axios.get("https://mahmud-global-apis.onrender.com/api/cdp");
       const { boy, girl } = res.data || {};
 
       if (!boy || !girl) return message.reply("⚠ No Couple DP found.");
 
-      // Helper: convert url → media
-      const getMedia = async (url) => {
-        try {
-          const response = await axios.get(url, {
-            responseType: "arraybuffer",
-            headers: { "User-Agent": "Mozilla/5.0", "Accept": "image/*" },
-            timeout: 7000
-          });
-          const buffer = Buffer.from(response.data, "binary");
-          const mimeType = response.headers["content-type"] || "image/jpeg";
-          return new MessageMedia(mimeType, buffer.toString("base64"), "dp.jpg");
-        } catch (err) {
-          console.error(`[CDP Fetch Error] ${url}:`, err.message);
-          // fallback
-          const fallback = await axios.get("https://picsum.photos/300/300", { responseType: "arraybuffer" });
-          return new MessageMedia("image/jpeg", Buffer.from(fallback.data).toString("base64"), "fallback.jpg");
-        }
-      };
+      // Load images with Jimp
+      const boyImg = await Jimp.read(boy);
+      const girlImg = await Jimp.read(girl);
 
-      // ⬇️ Load both images in parallel
-      const [mediaBoy, mediaGirl] = await Promise.all([getMedia(boy), getMedia(girl)]);
+      // Resize both images same height
+      boyImg.resize(300, 300);
+      girlImg.resize(300, 300);
 
-      // Send both together in a single reply
-      await message.reply([mediaBoy, mediaGirl], undefined, { caption: "🎀 Here's your Couple DP 👩‍❤️‍👨" });
+      // Create new canvas double width
+      const collage = new Jimp(600, 300);
 
-    } catch (error) {
-      console.error("[CDP Command Error]", error.message);
-      return message.reply("❌ Failed to process your request. Please try again later.");
+      // Place boy left, girl right
+      collage.composite(boyImg, 0, 0);
+      collage.composite(girlImg, 300, 0);
+
+      // Get buffer
+      const buffer = await collage.getBufferAsync(Jimp.MIME_JPEG);
+
+      // Send as one image
+      const media = new MessageMedia("image/jpeg", buffer.toString("base64"), "couple_dp.jpg");
+      await message.reply(media, undefined, { caption: "🎀 Here's your Couple DP 👩‍❤️‍👨" });
+
+    } catch (err) {
+      console.error("[CDP Command Error]", err.message);
+      return message.reply("❌ Failed to process your request. Try again later.");
     }
   }
 };
