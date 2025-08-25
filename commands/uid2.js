@@ -4,7 +4,7 @@ const { log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "uid",
-    version: "2.0",
+    version: "1.7",
     author: "MahMUD",
     countDown: 5,
     role: 0,
@@ -38,7 +38,7 @@ module.exports = {
       }
 
       // Send UID(s) as reply
-      const replyText = uids.map((u, i) => `🔑 UID: ${u}`).join('\n');
+      const replyText = uids.map((u, i) => `${u}`).join('\n');
       await message.reply(replyText);
 
       // Log UID(s)
