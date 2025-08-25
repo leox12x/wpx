@@ -1,10 +1,10 @@
-const { getUserData, getGroupData, log, trackCommand } = require('../scripts/helpers');
+const { getUserData, trackCommand, getGroupData, getParticipants, log, getGroupId } = require('../scripts/helpers');
 
 module.exports = {
   config: {
     name: "all2",
-    version: "1.5",
-    author: "NTKhang (Modified by Mahmud)",
+    version: "1.7",
+    author: "Mahmud",
     countDown: 5,
     role: 1,
     description: {
@@ -18,27 +18,23 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, event, args }) {
+  onStart: async function ({ message, event, args, api }) {
     try {
-      // Determine group ID safely
-      const groupId = event?.chatId || event?.groupID || event?.remoteJid || event?.threadID || message?.chat?.id;
+      // ---------------------- Get Group & Sender IDs ----------------------
+      const groupId = getGroupId({ message, event });
       if (!groupId) return message.reply("❌ Cannot determine group ID.");
 
-      // Determine sender ID safely
-      const senderId = event?.senderID || event?.from || message?.sender?.id;
+      const senderId = message?.senderId || event?.senderID || event?.from;
       if (!senderId) return message.reply("❌ Cannot determine sender ID.");
 
-      // Track the command usage
-      await trackCommand(senderId, event?.senderName || null);
+      await trackCommand(senderId, message?.senderName || null);
 
-      // Fetch group info from DB
-      const group = await getGroupData(groupId);
-      const participants = group.members || [];
+      // ---------------------- Fetch Participants ----------------------
+      const participants = await getParticipants({ message, event, api });
       if (!participants.length) return message.reply("❌ No group participants found.");
 
+      // ---------------------- Build Message ----------------------
       const content = args.join(" ") || "@all";
-
-      // Build mentions array
       const mentions = participants.map(id => ({ tag: content, id }));
 
       await message.reply({ body: content, mentions });
