@@ -2,7 +2,7 @@ const { getUserData, getGroupData, log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
-    name: "all",
+    name: "all2",
     version: "1.3",
     author: "NTKhang (Modified by Mahmud)",
     countDown: 5,
