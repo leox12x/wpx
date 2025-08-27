@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "uid",
     aliases: ["getuid", "id"],
-    version: "1.1",
+    version: "1.7",
     author: "MahMUD",
     role: 0,
     shortDescription: {
