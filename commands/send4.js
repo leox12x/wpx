@@ -3,7 +3,7 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "send4",
-    version: "1.7",
+    version: "2.0",
     author: "MahMUD",
     role: 0,
     shortDescription: {
@@ -22,7 +22,7 @@ module.exports = {
       transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
       transfer_fail: "❌ | Failed to send coins. Please check the user and try again.",
       self_transfer: "❎ You cannot send coins to yourself.",
-      invalid_command: "❎ Invalid command. Example: !send @user 100",
+      invalid_command: "❎ Invalid command. Example: !send coins @user 100",
       no_user: "❎ Please provide a user by replying, mentioning, or entering their UID."
     },
   },
@@ -51,13 +51,17 @@ module.exports = {
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
-    // ✅ Reply case fix for WhatsApp Web
+    // ✅ Reply case fix with debug
     if (message.messageReply) {
-      recipientID = message.messageReply.key?.participant || message.messageReply.participant;
+      console.log("DEBUG reply structure:", JSON.stringify(message.messageReply, null, 2));
+      recipientID =
+        message.messageReply.key?.participant || 
+        message.messageReply.participant || 
+        null;
     } else if (mentionIds.length > 0) {
       recipientID = mentionIds[0];
     } else {
-      recipientID = args[1]; 
+      recipientID = args[1];
     }
 
     if (!recipientID) return message.reply(getLang("no_user"));
