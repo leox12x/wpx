@@ -3,12 +3,12 @@ const { log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
-    name: "uid",
+    name: "tid",
     version: "1.7",
     author: "MahMUD",
     countDown: 5,
     role: 0,
-    category: "general",
+    category: "group",
     guide: "{pn} - Show your WhatsApp UID\n{pn} @tag - Show UID of tagged user\nReply a message with {pn} - Show UID of that user"
   },
 
