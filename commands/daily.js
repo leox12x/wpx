@@ -5,8 +5,8 @@ module.exports = {
   config: {
     name: "daily",
     aliases: ["dailyreward", "checkin"],
-    version: "1.5",
-    author: "RL + Fixed by Mahmud",
+    version: "1.7",
+    author: "MahMUD",
     coolDown: 5,
     role: 0,
     description: "Receive daily gift rewards",
@@ -23,9 +23,9 @@ module.exports = {
 
   langs: {
     en: {
-      alreadyReceived: "❌ You've already claimed today's reward!\n🕰️ Try again after 12:00 AM (BD time).",
-      received: "🎁 *Daily Reward Claimed!*\n\n💰 Coins: +%1\n⭐ EXP: +%2\n\n💼 Total Coins: %3\n🏆 Total EXP: %4",
-      rewardInfo: "📅 *Daily Reward Schedule*\n\n%1\n\n💡 Rewards increase by 20% each day!"
+      alreadyReceived: "❌ 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐫𝐞𝐜𝐞𝐢𝐯𝐞𝐝 𝐭𝐡𝐞 𝐠𝐢𝐟𝐭 𝐭𝐫𝐲 𝐀𝐠𝐚𝐢𝐧 𝐭𝐨𝐦𝐨𝐫𝐫𝐨𝐰.",
+      received: "🎁 *Daily Reward Claimed*\n\n💰 Coins: +%1\n⭐ EXP: +%2\n\n💼 Total Coins: %3\n🏆 Total EXP: %4",
+      rewardInfo: "📅 *Daily Reward Schedule*\n\n%1\n\n💡 Rewards increase by 20% each day"
     }
   },
 
