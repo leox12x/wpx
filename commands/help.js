@@ -1,12 +1,11 @@
 module.exports = {
     config: {
         name: "help",
-        aliases: ["h", "commands"],
-        version: "1.1",
-        author: "Rahaman Leon",
+        aliases: ["h", "commands", "menu"],
+        version: "1.7",
+        author: "MahMUD",
         coolDown: 5,
-        role: 0, // Available to all users
-        description: "Show available commands",
+        role: 0,
         category: "utility",
         guide: {
             en: "Use {prefix}help to see all commands or {prefix}help <command> for specific command info"
@@ -41,22 +40,18 @@ module.exports = {
                 return await message.reply(helpText);
             }
 
-            // Show all commands grouped by category
             const commands = Array.from(client.commands || []);
             if (commands.length === 0) {
                 return await message.reply("❌ No commands available.");
             }
 
-            // Get unique commands only (avoid duplicates from aliases)
             const uniqueCommands = new Map();
             commands.forEach(([commandName, command]) => {
-                // Only add if this is the main command name (not an alias)
                 if (commandName === command.config.name.toLowerCase()) {
                     uniqueCommands.set(commandName, command);
                 }
             });
 
-            // Group unique commands by category
             const categories = Array.from(uniqueCommands.values()).reduce((acc, command) => {
                 const category = (command.config.category || 'Other').toUpperCase();
                 if (!acc[category]) acc[category] = [];
@@ -85,8 +80,11 @@ module.exports = {
                 helpText += '╰────────────⭓\n\n';
             }
 
-            helpText += `⭔Type ${prefix}help <command> to learn usage.\n`;
-            helpText += `⭔Type ${prefix}supportgc to join our bot support group`;
+            helpText += `╭─ [ YOUR HINATA BABY ]\n`;
+            helpText += `╰‣ Admin: 𝐌𝐚𝐡 𝐌𝐔𝐃 🎀\n`;
+            helpText += `╰‣ 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 \n`;
+            helpText += `╰‣ m.me/mahmud.x07\n\n`;
+            helpText += `⭔Type !help <command> to learn usage.`;
 
             await message.reply(helpText);
 
