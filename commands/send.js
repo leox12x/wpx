@@ -10,7 +10,7 @@ module.exports = {
       en: "Send coins to another user",
     },
     longDescription: {
-      en: "Send coins to another user using UID, mention, or by replying. The amount is at the end.",
+      en: "Send coins to another user using UID or mention. The amount is at the end.",
     },
     category: "economy",
   },
@@ -22,8 +22,8 @@ module.exports = {
       transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
       transfer_fail: "❌ | Failed to send coins. Please check the user and try again.",
       self_transfer: "❎ You cannot send coins to yourself.",
-      invalid_command: "❎ Invalid command. Example: !send @user 100",
-      no_user: "❎ Please provide a user by replying, mentioning, or entering their UID."
+      invalid_command: "❎ Invalid command. Example: !send coins @user 100",
+      no_user: "❎ Please provide a user by mentioning them or entering their UID."
     },
   },
 
@@ -38,26 +38,22 @@ module.exports = {
   },
 
   onStart: async function ({ args, message, getLang }) {
-    const senderID = message.author; // WhatsApp sender
+    const senderID = message.author; 
     const mentionIds = message.mentionedIds || [];
     let recipientID, amount;
 
     if (!args[0] || args.length < 2) return message.reply(getLang("invalid_command"));
 
-    // Handle alias -m
     let commandArg = args[0].toLowerCase();
     if (commandArg === "-m") commandArg = "coins";
     if (commandArg !== "coins") return message.reply(getLang("invalid_command"));
 
-    // Amount is always last argument
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
-    // Determine recipient
-    if (message.messageReply && message.messageReply.author) {
-      recipientID = message.messageReply.author; // reply case
-    } else if (mentionIds.length > 0) {
-      recipientID = mentionIds[0]; // mention case
+    // ✅ Remove reply option
+    if (mentionIds.length > 0) {
+      recipientID = mentionIds[0];
     } else {
       recipientID = args[1]; // manual UID
     }
