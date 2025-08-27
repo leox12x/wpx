@@ -3,7 +3,7 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "send4",
-    version: "2.0",
+    version: "2.1",
     author: "MahMUD",
     role: 0,
     shortDescription: {
@@ -38,18 +38,16 @@ module.exports = {
   },
 
   onStart: async function ({ args, message, getLang }) {
-    const senderID = message.from; // WhatsApp sender
+    const senderID = message.from; 
     const mentionIds = message.mentionedIds || [];
     let recipientID, amount;
 
     if (!args[0] || args.length < 2) return message.reply(getLang("invalid_command"));
 
-    // Handle alias -m
     let commandArg = args[0].toLowerCase();
     if (commandArg === "-m") commandArg = "coins";
     if (commandArg !== "coins") return message.reply(getLang("invalid_command"));
 
-    // Amount is always last argument
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
@@ -63,8 +61,6 @@ module.exports = {
       recipientID = args[1]; // manual UID
     }
 
-    console.log("Recipient ID resolved as:", recipientID);
-
     if (!recipientID) return message.reply(getLang("no_user"));
     if (recipientID === senderID) return message.reply(getLang("self_transfer"));
 
@@ -72,14 +68,16 @@ module.exports = {
       const senderData = await getUserData(senderID);
       const recipientData = await getUserData(recipientID);
 
-      if (!recipientData) return message.reply(getLang("invalid_user"));
+      // ✅ Ensure coins fields exist
+      if (typeof senderData.coins !== "number") senderData.coins = 0;
+      if (typeof recipientData.coins !== "number") recipientData.coins = 0;
 
-      const senderBalance = senderData.coins || 0;
+      const senderBalance = senderData.coins;
       if (amount > senderBalance) return message.reply(getLang("not_enough_coins"));
 
       // Update balances
       await updateUserData(senderID, { coins: senderBalance - amount });
-      await updateUserData(recipientID, { coins: (recipientData.coins || 0) + amount });
+      await updateUserData(recipientID, { coins: recipientData.coins + amount });
 
       const formattedAmount = this.formatCoins(amount);
       const recipientName = recipientData.name || recipientID.split("@")[0];
