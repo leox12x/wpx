@@ -4,7 +4,7 @@ const { log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "top6",
-    version: "1.8",
+    version: "2.1",
     author: "MahMUD",
     role: 0,
     category: "economy",
@@ -13,7 +13,7 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, args, usersData }) {
+  onStart: async function ({ message, args, client }) {
     try {
       const type = (args[0] || "bal").toLowerCase();
 
@@ -28,16 +28,16 @@ module.exports = {
 
       const medals = ["🥇", "🥈", "🥉"];
 
-      // always fetch pushname from usersData
       const topList = await Promise.all(users.map(async (user, i) => {
         const rank = i < 3 ? medals[i] : `${i + 1}.`;
-        const userID = user.userID || user.id || "Unknown";
+        const userID = user.userID || user.id;
 
         let name;
         try {
-          name = await usersData.getName(userID); // ✅ Always pushname
+          const contact = await client.getContactById(userID); // ✅ whatsapp-web.js method
+          name = contact?.pushname || contact?.name || contact?.number || userID;
         } catch {
-          name = userID; // fallback
+          name = userID; // fallback if contact not found
         }
 
         return type === "exp"
