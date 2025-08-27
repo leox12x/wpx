@@ -10,19 +10,19 @@ module.exports = {
       en: "Send coins to another user",
     },
     longDescription: {
-      en: "Send coins to another user using UID or mention. The amount is at the end.",
+      en: "Send money to another user using UID or mention. The amount is at the end.",
     },
     category: "economy",
   },
   langs: {
     en: {
-      invalid_amount: "❎ Please specify a valid amount of coins to send.",
+      invalid_amount: "❎ Please specify a valid amount of money to send.",
       not_enough_coins: "❎ You don't have enough coins to send.",
       invalid_user: "❎ The specified user is invalid or not found.",
       transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
-      transfer_fail: "❌ | Failed to send coins. Please check the user and try again.",
+      transfer_fail: "❌ | Failed to send money. Please check the user and try again.",
       self_transfer: "❎ You cannot send coins to yourself.",
-      invalid_command: "❎ Invalid command. Example: !send coins @user 100",
+      invalid_command: "❎ Invalid command. Example: !send money @user 100",
       no_user: "❎ Please provide a user by mentioning them or entering their UID."
     },
   },
@@ -45,8 +45,8 @@ module.exports = {
     if (!args[0] || args.length < 2) return message.reply(getLang("invalid_command"));
 
     let commandArg = args[0].toLowerCase();
-    if (commandArg === "-m") commandArg = "coins";
-    if (commandArg !== "coins") return message.reply(getLang("invalid_command"));
+    if (commandArg === "-m") commandArg = "money";
+    if (commandArg !== "money") return message.reply(getLang("invalid_command"));
 
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
