@@ -2,8 +2,8 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
-    name: "send3",
-    version: "1.8",
+    name: "send",
+    version: "1.7",
     author: "MahMUD",
     role: 0,
     shortDescription: {
