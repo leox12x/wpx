@@ -28,18 +28,17 @@ module.exports = {
 
       const medals = ["🥇", "🥈", "🥉"];
 
-      // Get names from WhatsApp contacts using client.getContact()
+      // Always fetch pushname from WhatsApp live
       const topList = await Promise.all(users.map(async (user, i) => {
         const rank = i < 3 ? medals[i] : `${i + 1}.`;
         const userID = user.userID || user.id || "Unknown";
 
-        let name = userID;
+        let name;
         try {
-          const contact = await client.getContact(userID);
-          name = contact?.pushname || contact?.name || userID;
+          const contact = await client.getContactById(userID); // ✅ live fetch
+          name = contact?.pushname || contact?.name || contact?.number || userID;
         } catch {
-          // fallback to userID if contact not found
-          name = userID;
+          name = userID; // fallback to uid if fail
         }
 
         return type === "exp"
