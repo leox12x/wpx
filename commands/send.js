@@ -10,18 +10,18 @@ module.exports = {
       en: "Send coins to another user",
     },
     longDescription: {
-      en: "Send money to another user using UID or mention. The amount is at the end.",
+      en: "Send coins to another user using UID or mention. The amount is at the end.",
     },
     category: "economy",
   },
   langs: {
     en: {
       invalid_amount: "❎ Please specify a valid amount of money to send.",
-      not_enough_coins: "❎ You don't have enough coins to send.",
+      not_enough_coins: "❎ You don't have enough money to send.",
       invalid_user: "❎ The specified user is invalid or not found.",
-      transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
+      transfer_success: "✅ | Successfully sent {amount} money to {recipient}.",
       transfer_fail: "❌ | Failed to send money. Please check the user and try again.",
-      self_transfer: "❎ You cannot send coins to yourself.",
+      self_transfer: "❎ You cannot send money to yourself.",
       invalid_command: "❎ Invalid command. Example: !send money @user 100",
       no_user: "❎ Please provide a user by mentioning them or entering their UID."
     },
@@ -51,9 +51,9 @@ module.exports = {
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
-    // ✅ Remove reply option
+    // ✅ Remove message reply option completely
     if (mentionIds.length > 0) {
-      recipientID = mentionIds[0];
+      recipientID = mentionIds[0]; // mention
     } else {
       recipientID = args[1]; // manual UID
     }
