@@ -4,7 +4,7 @@ const { log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "top5",
-    version: "1.9",
+    version: "2.0",
     author: "MahMUD",
     role: 0,
     category: "economy",
@@ -13,7 +13,7 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ message, args, usersData }) {
+  onStart: async function ({ message, args, client }) {
     try {
       const type = (args[0] || "bal").toLowerCase();
 
@@ -28,16 +28,17 @@ module.exports = {
 
       const medals = ["🥇", "🥈", "🥉"];
 
-      // Always fetch pushname from WhatsApp
+      // Always fetch pushname from WhatsApp live
       const topList = await Promise.all(users.map(async (user, i) => {
         const rank = i < 3 ? medals[i] : `${i + 1}.`;
         const userID = user.userID || user.id || "Unknown";
 
         let name;
         try {
-          name = await usersData.getName(userID); // ✅ live WhatsApp name
+          const contact = await client.getContactById(userID); // ✅ live fetch
+          name = contact?.pushname || contact?.name || contact?.number || userID;
         } catch {
-          name = userID; // fallback to uid if not found
+          name = userID; // fallback to uid if fail
         }
 
         return type === "exp"
