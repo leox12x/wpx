@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: "u2",
-   version: "1.8",
+    version: "1.9",
     author: "MahMUD",
     role: 0,
     category: "group",
@@ -21,17 +21,18 @@ module.exports = {
   },
 
   onStart: async function({ message, event, api, getLang }) {
-    const replyMsg = event.messageReply;
+    // WA Web এ reply message detect
+    const replyMsg = event.messageReply || event.quotedMsg || event.quotedMessage;
     if (!replyMsg) return message.reply(getLang("syntaxError"));
 
     try {
-      // WA Web bot ID
+      // Bot ID
       const botID = api.getCurrentUserID ? await api.getCurrentUserID() : null;
       if (!botID) return message.reply("❌ Could not detect bot ID.");
 
       if (replyMsg.senderID !== botID) return message.reply(getLang("notBotMsg"));
 
-      // WA Web API compatible unsend
+      // Unsend
       await api.unsendMessage(replyMsg.messageID);
 
       return message.reply("✅ Message unsent successfully.");
