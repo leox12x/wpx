@@ -3,7 +3,7 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "send4",
-    version: "1.9",
+    version: "2.0",
     author: "MahMUD",
     role: 0,
     shortDescription: {
@@ -22,7 +22,7 @@ module.exports = {
       transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
       transfer_fail: "❌ | Failed to send coins. Please check the user and try again.",
       self_transfer: "❎ You cannot send coins to yourself.",
-      invalid_command: "❎ Invalid command. Example: !send2 @user 100",
+      invalid_command: "❎ Invalid command. Example: !send2 coins @user 100",
       no_user: "❎ Please provide a user by replying, mentioning, or entering their UID."
     },
   },
@@ -38,7 +38,7 @@ module.exports = {
   },
 
   onStart: async function ({ args, message, getLang }) {
-    const senderID = message.author; // WhatsApp sender
+    const senderID = message.from; // WhatsApp sender
     const mentionIds = message.mentionedIds || [];
     let recipientID, amount;
 
@@ -54,28 +54,30 @@ module.exports = {
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
     // ✅ Detect recipient (reply / mention / UID)
-    if (message.messageReply) {
-      recipientID = message.messageReply.sender 
-        || message.messageReply.author 
-        || message.messageReply.participant;
+    if (message.hasQuotedMsg) {
+      const quoted = await message.getQuotedMessage();
+      recipientID = quoted.author || quoted.from; // reply user
     } else if (mentionIds.length > 0) {
       recipientID = mentionIds[0]; // mention case
     } else {
       recipientID = args[1]; // manual UID
     }
 
+    console.log("Recipient ID resolved as:", recipientID);
+
     if (!recipientID) return message.reply(getLang("no_user"));
     if (recipientID === senderID) return message.reply(getLang("self_transfer"));
 
     try {
-      const recipientData = await getUserData(recipientID);
       const senderData = await getUserData(senderID);
+      const recipientData = await getUserData(recipientID);
 
       if (!recipientData) return message.reply(getLang("invalid_user"));
 
       const senderBalance = senderData.coins || 0;
       if (amount > senderBalance) return message.reply(getLang("not_enough_coins"));
 
+      // Update balances
       await updateUserData(senderID, { coins: senderBalance - amount });
       await updateUserData(recipientID, { coins: (recipientData.coins || 0) + amount });
 
@@ -90,7 +92,7 @@ module.exports = {
           .replace("{recipient}", recipientName)
       );
     } catch (err) {
-      console.error(err);
+      console.error("Transfer error:", err);
       return message.reply(getLang("transfer_fail"));
     }
   },
