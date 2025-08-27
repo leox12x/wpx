@@ -3,15 +3,11 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "send4",
-    version: "2.0",
+    version: "2.1",
     author: "MahMUD",
     role: 0,
-    shortDescription: {
-      en: "Send coins to another user",
-    },
-    longDescription: {
-      en: "Send coins to another user using UID, mention, or by replying. The amount is at the end.",
-    },
+    shortDescription: { en: "Send coins to another user" },
+    longDescription: { en: "Send coins to another user using UID, mention, or by replying. The amount is at the end." },
     category: "economy",
   },
   langs: {
@@ -27,7 +23,7 @@ module.exports = {
     },
   },
 
-  formatCoins: function (num) {
+  formatCoins(num) {
     const units = ["", "K", "M", "B", "T"];
     let unit = 0;
     while (num >= 1000 && unit < units.length - 1) {
@@ -53,15 +49,16 @@ module.exports = {
 
     // ------------------ Determine Recipient ------------------
     if (message.messageReply) {
-      recipientID =
-        message.messageReply.key?.participant ||  // group reply
-        message.messageReply.key?.remoteJid ||   // private reply
-        message.messageReply.participant ||      // fallback
-        null;
+      // Reply (group or private)
+      recipientID = message.messageReply.key?.participant || message.messageReply.key?.remoteJid;
     } else if (mentionIds.length > 0) {
+      // Mention
       recipientID = mentionIds[0];
-    } else {
+    } else if (args[1]?.includes("@")) {
+      // Explicit UID
       recipientID = args[1];
+    } else {
+      return message.reply(getLang("no_user"));
     }
 
     if (!recipientID) return message.reply(getLang("no_user"));
