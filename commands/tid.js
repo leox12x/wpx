@@ -1,57 +1,38 @@
-const User = require('../models/User');
-const { log } = require('../scripts/helpers');
-
 module.exports = {
   config: {
-    name: "tid",
+    name: ""tid",
+    aliases: ["groupid"],
     version: "1.7",
     author: "MahMUD",
-    countDown: 5,
     role: 0,
     category: "group",
-    guide: "{pn} - Show your WhatsApp UID\n{pn} @tag - Show UID of tagged user\nReply a message with {pn} - Show UID of that user"
+    shortDescription: {
+      en: "Show the current group's TID",
+    },
+    longDescription: {
+      en: "Use this command in a WhatsApp group to see the group's numeric TID.",
+    },
+    category: "utility",
   },
 
-  onStart: async function ({ message, args }) {
-    try {
-      let uids = [];
+  langs: {
+    en: {
+      not_group: "❎ This command can only be used in a group.",
+      show_tid: "🔹 Group TID: %1",
+    },
+  },
 
-      // ✅ Case 1: Replying to someone's message
-      if (message.hasQuotedMsg) {
-        const quoted = await message.getQuotedMessage();
-        const uid = (quoted.author || quoted.from).split('@')[0];
-        uids.push(uid);
-      }
+  onStart: async function ({ message, getLang }) {
+    const chatID = message.chat; // Current chat ID
 
-      // ✅ Case 2: Tagged users
-      else if (args.length > 0 && message.mentionedIds.length > 0) {
-        message.mentionedIds.forEach(id => {
-          const uid = id.split('@')[0];
-          uids.push(uid);
-        });
-      }
-
-      // ✅ Case 3: Default → own UID
-      else {
-        const uid = message.from.split('@')[0];
-        uids.push(uid);
-      }
-
-      // Send UID(s) as reply
-      const replyText = uids.map((u, i) => `${u}`).join('\n');
-      await message.reply(replyText);
-
-      // Log UID(s)
-      uids.forEach(u => log(`UID fetched: ${u}`));
-
-      // Save to DB
-      for (const uid of uids) {
-        await User.create({ uid }).catch(err => log(`[DB Error] ${err.message}`));
-      }
-
-    } catch (err) {
-      console.error("[UID Command Error]", err.message);
-      return message.reply("❌ Failed to get UID.");
+    // Check if it's a group
+    if (!chatID.endsWith("@g.us")) {
+      return message.reply(getLang("not_group"));
     }
+
+    // Remove @g.us
+    const tid = chatID.replace("@g.us", "");
+
+    return message.reply(getLang("show_tid").replace("%1", tid));
   }
 };
