@@ -38,7 +38,7 @@ module.exports = {
   },
 
   onStart: async function ({ args, message, getLang }) {
-    const senderID = message.author; 
+    const senderID = message.author;
     const mentionIds = message.mentionedIds || [];
     let recipientID, amount;
 
@@ -51,12 +51,12 @@ module.exports = {
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
-    // ✅ Reply case fix with debug
+    // ------------------ Determine Recipient ------------------
     if (message.messageReply) {
-      console.log("DEBUG reply structure:", JSON.stringify(message.messageReply, null, 2));
       recipientID =
-        message.messageReply.key?.participant || 
-        message.messageReply.participant || 
+        message.messageReply.key?.participant ||  // group reply
+        message.messageReply.key?.remoteJid ||   // private reply
+        message.messageReply.participant ||      // fallback
         null;
     } else if (mentionIds.length > 0) {
       recipientID = mentionIds[0];
@@ -68,21 +68,24 @@ module.exports = {
     if (recipientID === senderID) return message.reply(getLang("self_transfer"));
 
     try {
-      const recipientData = await getUserData(recipientID);
-      const senderData = await getUserData(senderID);
+      const [senderData, recipientData] = await Promise.all([
+        getUserData(senderID),
+        getUserData(recipientID)
+      ]);
 
       if (!recipientData) return message.reply(getLang("invalid_user"));
 
       const senderBalance = senderData.coins || 0;
       if (amount > senderBalance) return message.reply(getLang("not_enough_coins"));
 
+      // ------------------ Update Coins ------------------
       await updateUserData(senderID, { coins: senderBalance - amount });
       await updateUserData(recipientID, { coins: (recipientData.coins || 0) + amount });
 
       const formattedAmount = this.formatCoins(amount);
       const recipientName = recipientData.name || recipientID.split("@")[0];
 
-      log(`User ${senderID} sent ${amount} coins to ${recipientID}`);
+      log(`User ${senderID} sent ${amount} coins to ${recipientID}`, 'success');
 
       return message.reply(
         getLang("transfer_success")
@@ -90,7 +93,7 @@ module.exports = {
           .replace("{recipient}", recipientName)
       );
     } catch (err) {
-      console.error(err);
+      log(`Send command error: ${err.message}`, 'error');
       return message.reply(getLang("transfer_fail"));
     }
   },
