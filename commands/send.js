@@ -3,7 +3,7 @@ const { getUserData, updateUserData, log } = require('../scripts/helpers');
 module.exports = {
   config: {
     name: "send",
-    version: "1.7",
+    version: "1.8",
     author: "MahMUD",
     role: 0,
     shortDescription: {
@@ -42,7 +42,10 @@ module.exports = {
     const mentionIds = message.mentionedIds || [];
     let recipientID, amount;
 
-    if (!args[0] || args.length < 2) return message.reply(getLang("invalid_command"));
+    // যদি mention/UID না থাকে বা args কম হয়
+    if (args.length < 2 && mentionIds.length === 0) {
+      return message.reply(getLang("no_user"));
+    }
 
     let commandArg = args[0].toLowerCase();
     if (commandArg === "-m") commandArg = "money";
@@ -51,11 +54,13 @@ module.exports = {
     amount = parseInt(args[args.length - 1]);
     if (isNaN(amount) || amount <= 0) return message.reply(getLang("invalid_amount"));
 
-    // ✅ Remove message reply option completely
+    // ✅ recipient detection
     if (mentionIds.length > 0) {
       recipientID = mentionIds[0]; // mention
-    } else {
+    } else if (args[1]) {
       recipientID = args[1]; // manual UID
+    } else {
+      return message.reply(getLang("no_user")); // যদি শুধু amount থাকে
     }
 
     if (!recipientID) return message.reply(getLang("no_user"));
