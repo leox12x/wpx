@@ -1,34 +1,69 @@
 const User = require('../models/User');
+const { log } = require('../scripts/helpers');
 
 module.exports = {
   config: {
     name: "top5",
-    version: "1.2",
-    author: "Mahmud",
-    description: "Shows top users by EXP and Coins",
+    version: "1.9",
+    author: "MahMUD",
+    role: 0,
     category: "economy",
-    role: 0
+    guide: {
+      en: "Use `{pn}` or `{pn} bal` to view richest users, `{pn} exp` to view top EXP users"
+    }
   },
 
-  onStart: async function ({ message }) {
-    const users = await User.find({});
+  onStart: async function ({ message, args, usersData }) {
+    try {
+      const type = (args[0] || "bal").toLowerCase();
 
-    const topExp = [...users]
-      .sort((a, b) => b.exp - a.exp)
-      .slice(0, 10)
-      .map((user, i) => {
-        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
-        return `${medal} ${user.name || user.id}: ${user.exp} EXP`;
-      }).join("\n");
+      let users;
+      if (type === "exp") {
+        users = await User.find({ exp: { $gt: 0 } }).sort({ exp: -1 }).limit(15);
+        if (!users.length) return message.reply("No users with EXP to display.");
+      } else {
+        users = await User.find({ coins: { $gt: 0 } }).sort({ coins: -1 }).limit(15);
+        if (!users.length) return message.reply("No users with money to display.");
+      }
 
-    const topCoins = [...users]
-      .sort((a, b) => b.coins - a.coins)
-      .slice(0, 10)
-      .map((user, i) => {
-        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
-        return `${medal} ${user.name || user.id}: ${user.coins}$`;
-      }).join("\n");
+      const medals = ["🥇", "🥈", "🥉"];
 
-    message.reply(`👑 TOP EXP USERS:\n\n${topExp}\n\n👑 TOP COINS USERS:\n\n${topCoins}`);
+      // Always fetch pushname from WhatsApp
+      const topList = await Promise.all(users.map(async (user, i) => {
+        const rank = i < 3 ? medals[i] : `${i + 1}.`;
+        const userID = user.userID || user.id || "Unknown";
+
+        let name;
+        try {
+          name = await usersData.getName(userID); // ✅ live WhatsApp name
+        } catch {
+          name = userID; // fallback to uid if not found
+        }
+
+        return type === "exp"
+          ? `${rank} ${name}: ${formatNumber(user.exp)} EXP`
+          : `${rank} ${name}: ${formatNumber(user.coins)}$`;
+      }));
+
+      const title = type === "exp"
+        ? "👑 TOP 15 EXP USERS:"
+        : "👑 | Top 15 Richest Users:";
+
+      return message.reply(`${title}\n\n${topList.join("\n")}`);
+
+    } catch (error) {
+      log(`Top command error: ${error.message}`, "error");
+      return message.reply("❌ An error occurred while fetching leaderboard.");
+    }
   }
 };
+
+function formatNumber(num) {
+  const units = ["", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "N", "D"];
+  let unit = 0;
+  while (num >= 1000 && unit < units.length - 1) {
+    num /= 1000;
+    unit++;
+  }
+  return Number(num.toFixed(1)) + units[unit];
+}
