@@ -1,81 +1,111 @@
 const { getUserData, updateUserData, log } = require('../scripts/helpers');
 
 module.exports = {
-    config: {
-        name: "send",
-        aliases: ["transfer", "pay"],
-        version: "1.0",
-        author: "Assistant",
-        coolDown: 10,
-        role: 0,
-        description: "Transfer coins to another user",
-        category: "economy",
-        guide: {
-            en: "{prefix}send @mention <amount> - Send coins to mentioned user"
-        }
+  config: {
+    name: "send",
+    version: "1.7",
+    author: "MahMUD",
+    role: 0,
+    shortDescription: {
+      en: "Send coins to another user",
     },
+    longDescription: {
+      en: "Send coins to another user using UID, mention, or by replying. The amount is at the end.",
+    },
+    category: "economy",
+  },
+  langs: {
+    en: {
+      invalid_amount: "❎ Please specify a valid amount of coins to send.",
+      not_enough_coins: "❎ You don't have enough coins to send.",
+      invalid_user: "❎ The specified user is invalid or not found.",
+      transfer_success: "✅ | Successfully sent {amount} coins to {recipient}.",
+      transfer_fail: "❌ | Failed to send coins. Please check the user and try again.",
+      self_transfer: "❎ You cannot send coins to yourself.",
+      invalid_command: "❎ Invalid command. Example: !send @user 100",
+      no_user: "❎ Please provide a user by replying, mentioning, or entering their UID."
+    },
+  },
 
-    onStart: async function ({ message, args, client }) {
-        try {
-            const mentions = message.mentionedIds || [];
-            const senderId = message.author || message.from;
-
-            if (mentions.length === 0) {
-                return await message.reply("❌ Please mention a user to transfer coins to.\n\nUsage: !transfer @user <amount>");
-            }
-
-            if (mentions.includes(senderId)) {
-                return await message.reply("❌ You cannot transfer coins to yourself!");
-            }
-
-            const amount = parseInt(args[args.length - 1]);
-            if (isNaN(amount) || amount <= 0) {
-                return await message.reply("❌ Please specify a valid amount to transfer.\n\nUsage: !transfer @user <amount>");
-            }
-
-            if (amount < 10) {
-                return await message.reply("❌ Minimum transfer amount is 10 coins.");
-            }
-
-            const senderData = await getUserData(senderId);
-            const receiverId = mentions[0];
-            const receiverData = await getUserData(receiverId);
-
-            if (senderData.coins < amount) {
-                return await message.reply(`❌ Insufficient balance! You have ${senderData.coins} coins but need ${amount} coins.`);
-            }
-
-            // Perform transfer
-            await updateUserData(senderId, {
-                coins: senderData.coins - amount,
-                lastActive: Date.now()
-            });
-
-            await updateUserData(receiverId, {
-                coins: receiverData.coins + amount,
-                lastActive: Date.now()
-            });
-
-            // Get receiver's name
-            let receiverName = "Unknown User";
-            try {
-                const contact = await client.getContactById(receiverId);
-                receiverName = contact.name || contact.number || "Unknown User";
-            } catch (error) {
-                receiverName = receiverId.split('@')[0];
-            }
-
-            const successMessage = `✅ **Transfer Successful!**\n\n` +
-                `💸 Sent: ${amount} coins\n` +
-                `👤 To: ${receiverName}\n` +
-                `💰 Your Balance: ${senderData.coins - amount} coins`;
-
-            await message.reply(successMessage);
-            log(`Transfer: ${senderId} sent ${amount} coins to ${receiverId}`, 'info');
-
-        } catch (error) {
-            log(`Error in transfer command: ${error.message}`, 'error');
-            await message.reply("❌ An error occurred during the transfer. Please try again later.");
-        }
+  formatCoins: function (num) {
+    const units = ["", "K", "M", "B", "T"];
+    let unit = 0;
+    while (num >= 1000 && unit < units.length - 1) {
+      num /= 1000;
+      unit++;
     }
+    return Number(num.toFixed(1)) + units[unit];
+  },
+
+  onStart: async function ({ args, message, event, getLang }) {
+    const { senderID, mentions, messageReply } = event;
+    let recipientID, amount;
+
+    if (!args[0] || args.length < 2) {
+      return message.reply(getLang("invalid_command"));
+    }
+
+    // Handle alias -m
+    let commandArg = args[0].toLowerCase();
+    if (commandArg === "-m") commandArg = "coins";
+
+    if (commandArg !== "coins") {
+      return message.reply(getLang("invalid_command"));
+    }
+
+    // Amount is always last argument
+    amount = parseInt(args[args.length - 1]);
+    if (isNaN(amount) || amount <= 0) {
+      return message.reply(getLang("invalid_amount"));
+    }
+
+    // Determine recipient
+    if (messageReply && messageReply.senderID) {
+      recipientID = messageReply.senderID;
+    } else if (mentions && Object.keys(mentions).length > 0) {
+      recipientID = Object.keys(mentions)[0];
+    } else {
+      recipientID = args[1]; // UID entered manually
+    }
+
+    if (!recipientID) {
+      return message.reply(getLang("no_user"));
+    }
+
+    if (recipientID === senderID) {
+      return message.reply(getLang("self_transfer"));
+    }
+
+    try {
+      // Fetch user data
+      const recipientData = await getUserData(recipientID);
+      const senderData = await getUserData(senderID);
+
+      if (!recipientData) return message.reply(getLang("invalid_user"));
+
+      const senderBalance = senderData.coins || 0;
+      if (amount > senderBalance) {
+        return message.reply(getLang("not_enough_coins"));
+      }
+
+      // Update balances
+      await updateUserData(senderID, { coins: senderBalance - amount });
+      await updateUserData(recipientID, { coins: (recipientData.coins || 0) + amount });
+
+      const formattedAmount = this.formatCoins(amount);
+      const recipientName = recipientData.name || "Unknown";
+
+      // Optional: log the transaction
+      log(`User ${senderID} sent ${amount} coins to ${recipientID}`);
+
+      return message.reply(
+        getLang("transfer_success")
+          .replace("{amount}", formattedAmount)
+          .replace("{recipient}", recipientName)
+      );
+    } catch (err) {
+      console.error(err);
+      return message.reply(getLang("transfer_fail"));
+    }
+  },
 };
