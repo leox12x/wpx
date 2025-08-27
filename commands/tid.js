@@ -5,14 +5,13 @@ module.exports = {
     version: "1.7",
     author: "MahMUD",
     role: 0,
-    category: "group",
+    category: "utility",
     shortDescription: {
       en: "Show the current group's TID",
     },
     longDescription: {
       en: "Use this command in a WhatsApp group to see the group's numeric TID.",
     },
-    category: "utility",
   },
 
   langs: {
@@ -23,14 +22,14 @@ module.exports = {
   },
 
   onStart: async function ({ message, getLang }) {
-    const chatID = message.chat; // Current chat ID
+    const chatID = String(message.chat); // Convert to string to avoid endsWith error
 
     // Check if it's a group
     if (!chatID.endsWith("@g.us")) {
       return message.reply(getLang("not_group"));
     }
 
-    // Remove @g.us
+    // Extract TID by removing "@g.us"
     const tid = chatID.replace("@g.us", "");
 
     return message.reply(getLang("show_tid").replace("%1", tid));
