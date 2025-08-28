@@ -181,7 +181,7 @@ global.utils.unloadScripts = unloadScripts;
 module.exports = {
   config: {
     name: "cmd",
-    version: "2.0",
+    version: "2.1",
     author: "NTKhang | Fixed by Rahaman Leon",
     countDown: 5,
     role: 2,
@@ -253,12 +253,19 @@ module.exports = {
         }
       } else {
         rawCode = event.body.slice(event.body.indexOf("install") + 7).replace(fileName, "").trim();
+        if (!rawCode) return message.reply(getLang("invalidUrlOrCode"));
       }
 
       const target = path.join(COMMANDS_DIR, fileName);
       if (fs.existsSync(target)) {
         return message.reply(getLang("alreadExist"), (_, info) => {
-          global.GoatBot.onReaction.set(info.messageID, { commandName, messageID: info.messageID, type: "install", author: event.senderID, data: { fileName, rawCode } });
+          global.GoatBot.onReaction.set(info.messageID, { 
+            commandName, 
+            messageID: info.messageID, 
+            type: "install", 
+            author: event.senderID, 
+            data: { fileName, rawCode } 
+          });
         });
       }
 
