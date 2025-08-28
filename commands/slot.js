@@ -80,7 +80,7 @@ module.exports = {
         display = lang.lose_message.replace("%1", formatNumber(Math.abs(reward)));
       }
 
-      return message.reply(`>🎀\n• ${display}\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭 [ ${slot1} | ${slot2} | ${slot3} ]`);
+      return message.reply(`>🎀\n• ${display}\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭: [ ${slot1} | ${slot2} | ${slot3} ]`);
 
     } catch (err) {
       console.error("Slot error:", err);
