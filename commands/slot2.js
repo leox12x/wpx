@@ -29,7 +29,7 @@ const lang = {
 
 module.exports = {
   config: {
-    name: "slot2",
+    name: "slot",
     version: "1.8",
     author: "MahMUD",
     countDown: 10,
@@ -63,7 +63,7 @@ module.exports = {
       if (slot1 === slot2 && slot2 === slot3) {
         reward = bet * 10;
       } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
-        reward = bet * 2;
+        reward = bet * 3;
       } else {
         reward = -bet;
       }
