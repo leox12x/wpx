@@ -1,18 +1,25 @@
 const { MongoClient } = require("mongodb");
 const { getUserData, updateUserData } = require("../scripts/helpers");
 
-const mongoUri = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0"; // change if needed
+const mongoUri = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0";
+
+let client;
+async function connectDB() {
+  if (!client || !client.topology || !client.topology.isConnected()) {
+    client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+    await client.connect();
+  }
+  return client.db("WhatsappbotV2").collection("bankData");
+}
 
 module.exports = {
   config: {
     name: "bank",
-    version: "1.7",
+    version: "1.8",
     author: "MahMUD",
     role: 0,
     category: "economy",
-    shortDescription: {
-      en: "Deposit, withdraw, transfer, interest system"
-    },
+    shortDescription: { en: "Deposit, withdraw, transfer, interest system" },
     longDescription: {
       en: "Bank system: deposit, withdraw, transfer coins, earn daily interest, loan system, top ranking."
     },
@@ -23,7 +30,8 @@ module.exports = {
 
   onStart: async function ({ args, message, event }) {
     const senderID = event.senderID;
-    const userCoins = (await getUserData(senderID)).coins || 0;
+    const userData = await getUserData(senderID);
+    const userCoins = userData?.coins || 0;
 
     if (!args[0]) {
       return message.reply(
@@ -38,10 +46,7 @@ module.exports = {
     }
 
     const action = args[0].toLowerCase();
-    const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
-    await client.connect();
-    const db = client.db("WhatsappbotV2");
-    const bankCollection = db.collection("bankData");
+    const bankCollection = await connectDB();
 
     let bankData = await bankCollection.findOne({ userId: senderID });
     if (!bankData) {
@@ -56,8 +61,8 @@ module.exports = {
       case "deposit": {
         const amount = parseInt(args[1]);
         if (!amount || amount <= 0) return message.reply("❎ Enter a valid deposit amount.");
-        if (userMoney < amount) return message.reply("❎ You don't have enough coins.");
-        await updateUserData(senderID, { coins: userMoney - amount });
+        if (userCoins < amount) return message.reply("❎ You don't have enough coins.");
+        await updateUserData(senderID, { coins: userCoins - amount });
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: amount } });
         return message.reply(`✅ Deposited ${amount} coins into bank.`);
       }
@@ -66,16 +71,13 @@ module.exports = {
         const amount = parseInt(args[1]);
         if (!amount || amount <= 0) return message.reply("❎ Enter a valid withdraw amount.");
         if (bankBalance < amount) return message.reply("❎ Not enough balance in bank.");
-        await updateUserData(senderID, { coins: userMoney + amount });
+        await updateUserData(senderID, { coins: userCoins + amount });
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
         return message.reply(`✅ Withdrew ${amount} coins from bank.`);
       }
 
       case "balance": {
-        return message.reply(
-          `💳 Bank Balance: ${bankBalance}\n` +
-          `💰 Wallet Balance: ${userMoney}`
-        );
+        return message.reply(`💳 Bank Balance: ${bankBalance}\n💰 Wallet Balance: ${userCoins}`);
       }
 
       case "transfer": {
@@ -106,14 +108,8 @@ module.exports = {
       }
 
       case "top": {
-        const topUsers = await bankCollection
-          .find({})
-          .sort({ bank: -1 })
-          .limit(10)
-          .toArray();
-
+        const topUsers = await bankCollection.find({}).sort({ bank: -1 }).limit(10).toArray();
         if (!topUsers.length) return message.reply("❎ No bank records yet.");
-
         let msg = "🏦 Bank Top 10 Users 🏦\n\n";
         for (let i = 0; i < topUsers.length; i++) {
           const u = topUsers[i];
