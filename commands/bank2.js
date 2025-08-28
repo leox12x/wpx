@@ -15,7 +15,7 @@ async function connectDB() {
 module.exports = {
   config: {
     name: "bank",
-    version: "1.8",
+    version: "2.0",
     author: "MahMUD",
     role: 0,
     category: "economy",
@@ -28,8 +28,11 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ args, message, event }) {
-    const senderID = event.senderID;
+  onStart: async function ({ args, message }) {
+    // ---------------- WhatsApp Web.js senderID ----------------
+    const senderID = message.from; 
+    if (!senderID) return message.reply("❎ Could not detect sender ID.");
+
     const userData = await getUserData(senderID);
     const userCoins = userData?.coins || 0;
 
@@ -48,15 +51,14 @@ module.exports = {
     const action = args[0].toLowerCase();
     const bankCollection = await connectDB();
 
+    // Fetch or initialize bank data
     let bankData = await bankCollection.findOne({ userId: senderID });
     if (!bankData) {
       bankData = { userId: senderID, bank: 0, lastInterest: Date.now() };
       await bankCollection.insertOne(bankData);
     }
-
     let bankBalance = bankData.bank || 0;
 
-    // ---------------- COMMAND HANDLERS ----------------
     switch (action) {
       case "deposit": {
         const amount = parseInt(args[1]);
@@ -85,10 +87,10 @@ module.exports = {
         const amount = parseInt(args[2]);
         if (!receiver || !amount) return message.reply("❎ Usage: bank transfer <uid> <amount>");
         if (bankBalance < amount) return message.reply("❎ Not enough coins in bank.");
-        let target = await getUserData(receiver);
-        if (!target) return message.reply("❎ Invalid target UID.");
+        const targetData = await getUserData(receiver);
+        if (!targetData) return message.reply("❎ Invalid target UID.");
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
-        await updateUserData(receiver, { coins: (target.coins || 0) + amount });
+        await updateUserData(receiver, { coins: (targetData.coins || 0) + amount });
         return message.reply(`✅ Transferred ${amount} coins to ${receiver}.`);
       }
 
