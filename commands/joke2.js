@@ -12,8 +12,7 @@ const jokes = [
 
 module.exports = {
   config: {
-    name: "joke",
-    aliases: ["funny", "laugh"],
+    name: "joke2",
     version: "1.1.0",
     author: "Rahaman Leon",
     role: 0,
