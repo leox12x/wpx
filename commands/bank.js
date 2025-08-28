@@ -15,7 +15,7 @@ async function connectDB() {
 module.exports = {
   config: {
     name: "bank",
-    version: "2.1",
+    version: "2.2",
     author: "MahMUD",
     role: 0,
     category: "economy",
@@ -32,9 +32,15 @@ module.exports = {
     const senderID = message.from;
     if (!senderID) return message.reply("❎ Could not detect sender ID.");
 
-    const userData = await getUserData(senderID);
-    const userCoins = userData?.coins || 0;
+    // --- Fetch wallet ---
+    let userData = await getUserData(senderID);
+    if (!userData) {
+      await updateUserData(senderID, { coins: 0 });
+      userData = { coins: 0 };
+    }
+    const userCoins = userData.coins || 0;
 
+    // --- Help if no args ---
     if (!args[0]) {
       return message.reply(
         "💳 Bank Commands:\n" +
@@ -50,10 +56,10 @@ module.exports = {
     const action = args[0].toLowerCase();
     const bankCollection = await connectDB();
 
-    // Fetch or initialize bank data
+    // --- Fetch or initialize bank data ---
     let bankData = await bankCollection.findOne({ userId: senderID });
     if (!bankData) {
-      bankData = { userId: senderID, bank: 0, lastInterest: Date.now() };
+      bankData = { userId: senderID, bank: 0, lastInterest: 0 };
       await bankCollection.insertOne(bankData);
     }
     let bankBalance = bankData.bank || 0;
@@ -62,7 +68,7 @@ module.exports = {
       case "deposit": {
         const amount = parseInt(args[1]);
         if (!amount || amount <= 0) return message.reply("❎ Enter a valid deposit amount.");
-        if (userCoins < amount) return message.reply("❎ You don't have enough coins.");
+        if (userCoins < amount) return message.reply("❎ You don't have enough coins in wallet.");
         await updateUserData(senderID, { coins: userCoins - amount });
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: amount } });
         return message.reply(`✅ Deposited ${amount} coins into bank.`);
@@ -87,10 +93,18 @@ module.exports = {
         if (!receiver || !amount) return message.reply("❎ Usage: bank transfer <uid> <amount>");
         if (bankBalance < amount) return message.reply("❎ Not enough coins in bank.");
         if (receiver === senderID) return message.reply("❎ You cannot transfer coins to yourself.");
-        const targetData = await getUserData(receiver);
-        if (!targetData) return message.reply("❎ Invalid target UID.");
+
+        // --- Ensure target exists ---
+        let targetData = await getUserData(receiver);
+        if (!targetData) {
+          await updateUserData(receiver, { coins: 0 });
+          targetData = { coins: 0 };
+        }
+
+        // --- Perform transfer ---
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
         await updateUserData(receiver, { coins: (targetData.coins || 0) + amount });
+
         return message.reply(`✅ Transferred ${amount} coins to ${receiver}.`);
       }
 
@@ -113,7 +127,11 @@ module.exports = {
         let msg = "🏦 Bank Top 10 Users 🏦\n\n";
         for (let i = 0; i < topUsers.length; i++) {
           const u = topUsers[i];
-          const user = await getUserData(u.userId);
+          let user = await getUserData(u.userId);
+          if (!user) {
+            await updateUserData(u.userId, { coins: 0 });
+            user = { name: u.userId };
+          }
           const name = user?.name || u.userId;
           msg += `${i + 1}. ${name} - 💳 ${u.bank} coins\n`;
         }
