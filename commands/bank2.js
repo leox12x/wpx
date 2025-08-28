@@ -1,0 +1,155 @@
+const { MongoClient } = require("mongodb");
+const { getUserData, updateUserData } = require("../scripts/helpers");
+
+const mongoUri = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0";
+
+let client;
+async function connectDB() {
+  if (!client || !client.topology || !client.topology.isConnected()) {
+    client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+    await client.connect();
+  }
+  return client.db("WhatsappbotV2").collection("bankData");
+}
+
+module.exports = {
+  config: {
+    name: "bank2",
+    version: "2.3",
+    author: "MahMUD",
+    role: 0,
+    category: "economy",
+    shortDescription: { en: "Deposit, withdraw, transfer, interest system" },
+    longDescription: {
+      en: "Bank system: deposit, withdraw, transfer coins, earn daily interest, top ranking."
+    },
+    guide: {
+      en: "{pn} deposit <amount>\n{pn} withdraw <amount>\n{pn} balance\n{pn} transfer <uid> <amount>\n{pn} interest\n{pn} top"
+    }
+  },
+
+  onStart: async function ({ args, message }) {
+    const senderID = message.from;
+    if (!senderID) return message.reply("❎ Could not detect sender ID.");
+
+    // --- Ensure wallet exists ---
+    let userData = await getUserData(senderID);
+    if (!userData) {
+      await updateUserData(senderID, { coins: 0 });
+      userData = { coins: 0 };
+    }
+    let wallet = userData.coins || 0;
+
+    const action = (args[0] || "").toLowerCase();
+    const bankCollection = await connectDB();
+
+    // --- Ensure bank exists ---
+    let bankData = await bankCollection.findOne({ userId: senderID });
+    if (!bankData) {
+      bankData = { userId: senderID, bank: 0, lastInterest: 0 };
+      await bankCollection.insertOne(bankData);
+    }
+    let bank = bankData.bank || 0;
+
+    // --- No args -> help ---
+    if (!action) {
+      return message.reply(
+        "💳 Bank Commands:\n" +
+        "- deposit <amount>\n" +
+        "- withdraw <amount>\n" +
+        "- balance\n" +
+        "- transfer <uid> <amount>\n" +
+        "- interest\n" +
+        "- top"
+      );
+    }
+
+    // --- Actions ---
+    switch (action) {
+      case "deposit": {
+        const amount = parseInt(args[1]);
+        if (!amount || amount <= 0) return message.reply("❎ Enter a valid deposit amount.");
+        if (wallet < amount) return message.reply("❎ You don't have enough coins in wallet.");
+
+        await updateUserData(senderID, { coins: wallet - amount });
+        await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: amount } });
+
+        return message.reply(`✅ Deposited ${amount} coins into bank.`);
+      }
+
+      case "withdraw": {
+        const amount = parseInt(args[1]);
+        if (!amount || amount <= 0) return message.reply("❎ Enter a valid withdraw amount.");
+        if (bank < amount) return message.reply("❎ Not enough balance in bank.");
+
+        await updateUserData(senderID, { coins: wallet + amount });
+        await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
+
+        return message.reply(`✅ Withdrew ${amount} coins from bank.`);
+      }
+
+      case "balance": {
+        return message.reply(
+          `💳 Bank Balance: ${bank}\n💰 Wallet Balance: ${wallet}`
+        );
+      }
+
+      case "transfer": {
+        const receiver = args[1];
+        const amount = parseInt(args[2]);
+
+        if (!receiver || !amount) return message.reply("❎ Usage: bank transfer <uid> <amount>");
+        if (bank < amount) return message.reply("❎ Not enough coins in bank.");
+        if (receiver === senderID) return message.reply("❎ You cannot transfer coins to yourself.");
+
+        // Ensure receiver wallet exists
+        let targetData = await getUserData(receiver);
+        if (!targetData) {
+          await updateUserData(receiver, { coins: 0 });
+          targetData = { coins: 0 };
+        }
+
+        await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
+        await updateUserData(receiver, { coins: (targetData.coins || 0) + amount });
+
+        return message.reply(`✅ Transferred ${amount} coins to ${receiver}.`);
+      }
+
+      case "interest": {
+        const now = Date.now();
+        const last = bankData.lastInterest || 0;
+
+        if (now - last < 24 * 60 * 60 * 1000)
+          return message.reply("❎ You can only claim interest once every 24h.");
+
+        const interest = Math.floor(bank * 0.05); // 5%
+        if (interest <= 0) return message.reply("❎ No balance to earn interest.");
+
+        await bankCollection.updateOne(
+          { userId: senderID },
+          { $inc: { bank: interest }, $set: { lastInterest: now } }
+        );
+
+        return message.reply(`✅ Claimed interest: +${interest} coins.`);
+      }
+
+      case "top": {
+        const topUsers = await bankCollection.find({}).sort({ bank: -1 }).limit(10).toArray();
+        if (!topUsers.length) return message.reply("❎ No bank records yet.");
+
+        let msg = "🏦 Bank Top 10 Users 🏦\n\n";
+        for (let i = 0; i < topUsers.length; i++) {
+          const u = topUsers[i];
+          let user = await getUserData(u.userId);
+          const name = user?.name || u.userId;
+          msg += `${i + 1}. ${name} - 💳 ${u.bank} coins\n`;
+        }
+
+        return message.reply(msg);
+      }
+
+      default:
+        return message.reply("❎ Invalid command. Try: balance, deposit, withdraw, transfer, interest, top");
+    }
+  }
+};
