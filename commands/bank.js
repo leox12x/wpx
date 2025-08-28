@@ -15,7 +15,7 @@ async function connectDB() {
 module.exports = {
   config: {
     name: "bank",
-    version: "2.0",
+    version: "2.1",
     author: "MahMUD",
     role: 0,
     category: "economy",
@@ -29,8 +29,7 @@ module.exports = {
   },
 
   onStart: async function ({ args, message }) {
-    // ---------------- WhatsApp Web.js senderID ----------------
-    const senderID = message.from; 
+    const senderID = message.from;
     if (!senderID) return message.reply("❎ Could not detect sender ID.");
 
     const userData = await getUserData(senderID);
@@ -87,6 +86,7 @@ module.exports = {
         const amount = parseInt(args[2]);
         if (!receiver || !amount) return message.reply("❎ Usage: bank transfer <uid> <amount>");
         if (bankBalance < amount) return message.reply("❎ Not enough coins in bank.");
+        if (receiver === senderID) return message.reply("❎ You cannot transfer coins to yourself.");
         const targetData = await getUserData(receiver);
         if (!targetData) return message.reply("❎ Invalid target UID.");
         await bankCollection.updateOne({ userId: senderID }, { $inc: { bank: -amount } });
@@ -97,9 +97,7 @@ module.exports = {
       case "interest": {
         const now = Date.now();
         const last = bankData.lastInterest || 0;
-        if (now - last < 24 * 60 * 60 * 1000) {
-          return message.reply("❎ You can only claim interest once every 24h.");
-        }
+        if (now - last < 24 * 60 * 60 * 1000) return message.reply("❎ You can only claim interest once every 24h.");
         const interest = Math.floor(bankBalance * 0.05); // 5% daily
         if (interest <= 0) return message.reply("❎ No balance to earn interest.");
         await bankCollection.updateOne(
