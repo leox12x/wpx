@@ -1,7 +1,7 @@
 const { MongoClient } = require("mongodb");
 const { getUserData, updateUserData } = require("../scripts/helpers");
 
-const mongoUri = "mongodb://127.0.0.1:27017"; // change if needed
+const mongoUri = "mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/whatsapp-bot?retryWrites=true&w=majority&appName=Cluster0"; // change if needed
 
 module.exports = {
   config: {
@@ -23,7 +23,7 @@ module.exports = {
 
   onStart: async function ({ args, message, event }) {
     const senderID = event.senderID;
-    const userMoney = (await getUserData(senderID)).coins || 0;
+    const userCoins = (await getUserData(senderID)).coins || 0;
 
     if (!args[0]) {
       return message.reply(
